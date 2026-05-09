@@ -611,7 +611,7 @@ function renderTokens() {
   list.innerHTML = entries.map(([token, config]) => {
     const name = config.name || 'Unnamed';
     const nodes = config.nodes || [];
-    const tokenUrl = subUrl ? \`\${new URL(subUrl).origin}/sub?token=\${token}\` : '';
+    const tokenUrl = subUrl ? \`\${new URL(subUrl).origin}/sub?token=\${encodeURIComponent(token)}\` : '';
     return \`
       <div class="token-row">
         <div class="token-info">
@@ -830,7 +830,7 @@ async function rotateToken() {
   const { ok, data } = await api("PUT", "/api/sub-token");
   if (!ok) { toast("Failed to rotate token", "err"); return; }
   const base = new URL(subUrl).origin;
-  subUrl = \`\${base}/sub?token=\${data.token}\`;
+  subUrl = \`\${base}/sub?token=\${encodeURIComponent(data.token)}\`;
   document.getElementById("sub-url-text").textContent = subUrl;
   toast("Token rotated", "ok");
 }
@@ -867,7 +867,7 @@ async function openQR() {
 
 async function showTokenQR(token) {
   const origin = new URL(subUrl).origin;
-  await showQR(\`\${origin}/sub?token=\${token}\`);
+  await showQR(\`\${origin}/sub?token=\${encodeURIComponent(token)}\`);
 }
 
 // ── Hide sensitive ──

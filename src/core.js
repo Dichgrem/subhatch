@@ -365,7 +365,7 @@ async function handleSubUrl(req, env) {
 	}
 	const subToken = await getSubToken(env.store, env.SUB_TOKEN);
 	const base = new URL(req.url).origin;
-	const subPath = subToken ? `/sub?token=${subToken}` : "/sub";
+	const subPath = subToken ? `/sub?token=${encodeURIComponent(subToken)}` : "/sub";
 	return jsonResp({ url: base + subPath });
 }
 

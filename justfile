@@ -46,7 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-delete-token test-logout
+test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-delete-token test-logout
 
 # GET /api/ping — health check
 test-ping:
@@ -179,6 +179,18 @@ test-scoped-sub:
 	SCOPED=$(curl -s {{BASE}}/api/sub-tokens -H "Authorization: Bearer $SESS" | jq -r '.tokens | keys[0]')
 	if [ "$SCOPED" = "null" ]; then echo "No scoped tokens to test"; exit 0; fi
 	curl -s "{{BASE}}/sub?token=$SCOPED"
+# GET /api/export/sing-box — export nodes as sing-box JSON
+test-export-sing-box:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/export/sing-box -H "Authorization: Bearer $TOKEN" | jq '{count, errors: (.errors | length)}'
+
+# CLI test: convert sample node URLs to sing-box JSON (no server needed)
+test-export-cli:
+	#!/usr/bin/env bash
+	node -e 'import("./src/export.js").then(m => { const r = m.exportSingBox(["vless://uuid@1.2.3.4:443?security=reality&sni=s0.awsstatic.com&fp=firefox&pbk=pubkey&sid=6ba7b810&flow=xtls-rprx-vision&encryption=none#Tokyo","vmess://eyJ2IjoiMiIsInBzIjoiVk1lc3MtSlAiLCJhZGQiOiIxMC4wLjAuMSIsInBvcnQiOiI0NDMiLCJpZCI6ImJiYTAwZDIzLTA3NTItNDBiNC1hZmZlLTY4Zjc3MDdhOTY2MSIsImFpZCI6IjAiLCJzY3kiOiJhdXRvIiwibmV0Ijoid3MiLCJ0eXBlIjoibm9uZSIsImhvc3QiOiJ3d3cuZXhhbXBsZS5jb20iLCJwYXRoIjoiL3BhdGgiLCJ0bHMiOiJ0bHMiLCJzbmkiOiJ3d3cuZXhhbXBsZS5jb20iLCJmcCI6ImZpcmVmb3gifQ==","trojan://pass@1.1.1.1:443?sni=bing.com&fp=chrome&multiplex=true#Trojan","ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpwYXNzd29yZA@2.2.2.2:8388#SS","hysteria2://abcdef@3.3.3.3:2333?sni=cn.bing.com&insecure=1#HY2","tuic://uuid-test:pass@4.4.4.4:8443?sni=yahoo.com&allow_insecure=1#TUIC","anytls://atpass@5.5.5.5:443?security=reality&sni=yahoo.com&fp=chrome&pbk=pubkey&sid=abcd#AT","naive://user:pass@6.6.6.6:443?sni=naive.example.com#Naive"]); console.log(JSON.stringify(r, null, 2)) })'
 # full integration test
 test-full:
 	#!/usr/bin/env bash

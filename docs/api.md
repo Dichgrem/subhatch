@@ -18,6 +18,7 @@ All `/api/*` endpoints except `/api/ping` require a valid session token in the `
 | POST   | `/api/logout`       | Invalidates session                  |
 | GET    | `/api/nodes`        | List env + stored nodes              |
 | PUT    | `/api/nodes`        | Save stored nodes (replaces all)     |
+| GET    | `/api/export/sing-box` | Export all nodes as sing-box JSON  |
 | GET    | `/api/sub-url`      | Returns the primary subscription URL |
 | PUT    | `/api/sub-token`    | Rotate the primary subscription token|
 | GET    | `/api/sub-tokens`   | List all tokens (primary + scoped)   |
@@ -95,3 +96,57 @@ DELETE /api/sub-tokens?token=<48-char-hex>
 - `GET /sub`: invalid tokens count toward the same 10-attempt / 15 min per IP limit
 - After 10 failures, returns `429 Too many requests`
 - Successful login or valid sub access clears the counter
+
+## GET /api/export/sing-box
+
+Exports all configured nodes as a sing-box-compatible outbounds JSON array. Requires admin session.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "count": 3,
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "Tokyo-01",
+      "server": "1.2.3.4",
+      "server_port": 443,
+      "uuid": "...",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "s0.awsstatic.com",
+        "utls": { "enabled": true, "fingerprint": "firefox" },
+        "reality": {
+          "enabled": true,
+          "public_key": "...",
+          "short_id": "..."
+        }
+      }
+    }
+  ],
+  "errors": []
+}
+```
+
+Supported URL schemes (auto-detected from node URI):
+
+| Scheme       | sing-box `type` | Notes |
+|-------------|-----------------|-------|
+| `vless://`  | `vless`         | Reality/TLS, ws/grpc/h2/tcp transport |
+| `vmess://`  | `vmess`         | Base64 JSON decoding, ws/grpc/h2 transport |
+| `trojan://` | `trojan`        | ws/grpc transport, multiplex |
+| `ss://`     | `shadowsocks`   | SIP002 + legacy format |
+| `hysteria2://` / `hy2://` | `hysteria2` | TLS insecure toggle |
+| `tuic://`   | `tuic`          | ALPN, congestion_control |
+| `anytls://` | `anytls`        | Reality with utls fingerprint |
+| `naive://`  | `naive`         | HTTP/3 proxy |
+
+The returned JSON can be directly merged into a sing-box client config:
+
+```json
+{
+  "outbounds": [ <paste the outbounds array here> ]
+}
+```

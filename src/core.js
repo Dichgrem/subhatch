@@ -3,6 +3,7 @@
  * Platform-agnostic. All handlers receive a normalized Env object.
  */
 
+import { exportSingBox } from "./export.js";
 import { HTML_PAGE } from "./ui.html.js";
 
 // ─────────────────────────────────────────────
@@ -365,7 +366,9 @@ async function handleSubUrl(req, env) {
 	}
 	const subToken = await getSubToken(env.store, env.SUB_TOKEN);
 	const base = new URL(req.url).origin;
-	const subPath = subToken ? `/sub?token=${encodeURIComponent(subToken)}` : "/sub";
+	const subPath = subToken
+		? `/sub?token=${encodeURIComponent(subToken)}`
+		: "/sub";
 	return jsonResp({ url: base + subPath });
 }
 
@@ -485,6 +488,26 @@ function handlePing() {
 	return jsonResp({ ok: true, ts: Date.now() });
 }
 
+/** GET /api/export/sing-box — export all nodes as sing-box JSON */
+async function handleExportSingBox(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+
+	const envNodes = parseEnvNodes(env.VLESS_NODES);
+	const stored = await getNodes(env.store);
+	const all = [...envNodes, ...stored].filter(Boolean);
+
+	const result = exportSingBox(all);
+	return jsonResp({
+		ok: true,
+		count: result.outbounds.length,
+		outbounds: result.outbounds,
+		errors: result.errors,
+	});
+}
+
 // ─────────────────────────────────────────────
 //  Node validation
 // ─────────────────────────────────────────────
@@ -542,6 +565,8 @@ export async function handleRequest(req, env) {
 		return handleGetNodes(req, env);
 	if (path === "/api/nodes" && method === "PUT")
 		return handleSaveNodes(req, env);
+	if (path === "/api/export/sing-box" && method === "GET")
+		return handleExportSingBox(req, env);
 	if (path === "/api/sub-url" && method === "GET")
 		return handleSubUrl(req, env);
 	if (path === "/api/sub-token" && method === "PUT")

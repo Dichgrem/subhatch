@@ -356,6 +356,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <div class="card-label" style="margin-bottom:0">Nodes</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="showBulkModal()">Bulk Import</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportSingBox()">Export JSON</button>
           <button class="btn btn-primary btn-sm" id="save-btn" onclick="saveNodes()">
             <span class="spin"></span><span class="label">Save</span>
           </button>
@@ -833,6 +834,23 @@ async function rotateToken() {
   subUrl = \`\${base}/sub?token=\${encodeURIComponent(data.token)}\`;
   document.getElementById("sub-url-text").textContent = subUrl;
   toast("Token rotated", "ok");
+}
+
+// ── Export Sing-box JSON ──
+async function exportSingBox() {
+  const { ok, data } = await api("GET", "/api/export/sing-box");
+  if (!ok) { toast("Export failed", "err"); return; }
+
+  const blob = new Blob([JSON.stringify({ outbounds: data.outbounds }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "sing-box-outbounds.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  const msg = \`Exported \${data.count} outbound(s)\`;
+  if (data.errors && data.errors.length) toast(msg + \` · \${data.errors.length} parse error(s)\`, "err");
+  else toast(msg, "ok");
 }
 
 // ── QR Code ──

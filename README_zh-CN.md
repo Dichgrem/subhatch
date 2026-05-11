@@ -7,7 +7,7 @@
 
 轻量级、自托管的代理节点订阅管理器。
 
-支持 **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC**。
+支持 **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTLS · Naive**。
 
 <p align="center">
   <img src="https://github.com/Dichgrem/subhatch/blob/main/example.png" width="700">
@@ -24,6 +24,7 @@
 - **环境变量注入节点** — 无需通过 UI 即可添加固定节点
 - **批量导入** — 支持粘贴原始 URI 或 base64 编码的订阅内容
 - **二维码** — 在 UI 中直接扫码获取订阅地址
+- **Sing-box 导出** — 一键下载所有节点为 sing-box 出站 JSON 配置
 - **零依赖** — 纯 ES Modules，无需 npm install
 - **预哈希密码** — 支持 SHA-256 十六进制字符串，无需明文存储
 - **CSRF 安全** — 会话存储在 localStorage 中作为 Bearer Token，不使用 Cookie

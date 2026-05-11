@@ -7,7 +7,7 @@
 
 A lightweight, self-hosted subscription manager for proxy nodes.
 
-Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC**.
+Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTLS · Naive**.
 
 <p align="center">
   <img src="https://github.com/Dichgrem/subhatch/blob/main/example.png" width="700">
@@ -24,6 +24,7 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC**.
 - **Env-var nodes** — inject static nodes without touching the UI
 - **Bulk import** — paste raw URIs or base64-encoded subscription content
 - **QR code** — scan subscription URL directly from the UI
+- **Sing-box export** — download all nodes as sing-box outbound JSON config
 - **Zero dependencies** — plain ES Modules, no npm install needed
 - **Pre-hashed passwords** — supports SHA-256 hex strings for zero-plaintext deployment
 - **CSRF-safe** — sessions in localStorage as Bearer tokens, not cookies

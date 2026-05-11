@@ -4,6 +4,7 @@
 subhatch/
 ├── src/
 │   ├── core.js           # Platform-agnostic business logic
+│   ├── export.js         # Sing-box JSON export converter
 │   └── ui.html.js        # Web UI HTML template
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers entry

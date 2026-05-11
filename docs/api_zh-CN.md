@@ -18,6 +18,7 @@
 | POST   | `/api/logout`        | 使会话失效                |
 | GET    | `/api/nodes`         | 列出 env + 存储节点       |
 | PUT    | `/api/nodes`         | 保存节点（全量替换）      |
+| GET    | `/api/export/sing-box` | 导出所有节点为 sing-box JSON |
 | GET    | `/api/sub-url`       | 返回主订阅地址            |
 | PUT    | `/api/sub-token`     | 轮换主订阅 Token          |
 | GET    | `/api/sub-tokens`    | 列出所有 Token（主+分）   |
@@ -95,3 +96,57 @@ DELETE /api/sub-tokens?token=<48位十六进制>
 - `GET /sub`：无效 Token 计入同一限制
 - 超过限制返回 `429 Too many requests`
 - 登录成功或有效 sub 访问清除计数
+
+## GET /api/export/sing-box
+
+将所有已配置的节点导出为 sing-box 兼容的出站 JSON 数组。需要管理员会话。
+
+**响应：**
+```json
+{
+  "ok": true,
+  "count": 3,
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "Tokyo-01",
+      "server": "1.2.3.4",
+      "server_port": 443,
+      "uuid": "...",
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": "s0.awsstatic.com",
+        "utls": { "enabled": true, "fingerprint": "firefox" },
+        "reality": {
+          "enabled": true,
+          "public_key": "...",
+          "short_id": "..."
+        }
+      }
+    }
+  ],
+  "errors": []
+}
+```
+
+支持的 URL 协议（从节点 URI 自动检测）：
+
+| 协议         | sing-box `type`  | 说明 |
+|-------------|------------------|------|
+| `vless://`  | `vless`          | Reality/TLS、ws/grpc/h2/tcp 传输 |
+| `vmess://`  | `vmess`          | Base64 JSON 解码、ws/grpc/h2 传输 |
+| `trojan://` | `trojan`         | ws/grpc 传输、multiplex |
+| `ss://`     | `shadowsocks`    | SIP002 + 旧格式 |
+| `hysteria2://` / `hy2://` | `hysteria2` | TLS 跳过验证开关 |
+| `tuic://`   | `tuic`           | ALPN、congestion_control |
+| `anytls://` | `anytls`         | Reality + utls 指纹 |
+| `naive://`  | `naive`          | HTTP/3 代理 |
+
+返回的 JSON 可直接合并到 sing-box 客户端配置：
+
+```json
+{
+  "outbounds": [ <粘贴 outbounds 数组> ]
+}
+```

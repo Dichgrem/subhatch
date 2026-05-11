@@ -51,6 +51,16 @@ body::after{
 
 .wrap{width:100%;max-width:700px;position:relative;z-index:1}
 
+/* update banner */
+.update-banner{
+  display:none;align-items:center;gap:10px;
+  background:linear-gradient(135deg,rgba(139,127,255,.15),rgba(255,126,179,.1));
+  border:1px solid rgba(139,127,255,.3);
+  border-radius:8px;padding:10px 14px;margin-bottom:14px;
+  font-size:.72rem;color:var(--accent);
+}
+.update-banner a{color:var(--accent2);margin-left:auto}
+
 /* ── header ── */
 header{margin-bottom:36px}
 header h1{
@@ -289,7 +299,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1>Sub Manager</h1>
+    <h1>Sub Manager <span style="font-size:.55rem;color:var(--muted);font-weight:400;letter-spacing:0" id="ver-tag"></span></h1>
     <p>VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
   </header>
 
@@ -310,6 +320,10 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
   <!-- ── Main ── -->
   <div class="view" id="v-main">
+    <div class="update-banner" id="update-banner">
+      <span id="update-msg"></span>
+      <a href="https://github.com/Dichgrem/subhatch/releases/latest" target="_blank">Download &rarr;</a>
+    </div>
     <div class="topbar">
       <div class="stats" id="stats-bar">
         <span>Nodes: <strong id="stat-total">0</strong></span>
@@ -429,6 +443,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
+const VERSION = "2.0.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -540,7 +555,7 @@ async function loadTokens() {
   renderTokens();
 }
 
-function showMain() { show('v-main'); }
+function showMain() { show('v-main'); checkUpdate(); }
 
 // ── Render nodes ──
 function renderNodes() {
@@ -893,6 +908,31 @@ function toggleHide() {
   const btn = document.getElementById('hide-btn');
   document.body.classList.toggle('hide-sensitive');
   btn.textContent = document.body.classList.contains('hide-sensitive') ? 'Show' : 'Hide';
+}
+
+// ── Version check ──
+document.getElementById('ver-tag').textContent = 'v' + VERSION;
+
+async function checkUpdate() {
+  try {
+    const r = await fetch('https://api.github.com/repos/Dichgrem/subhatch/releases/latest');
+    if (!r.ok) return;
+    const release = await r.json();
+    const latest = (release.tag_name || '').replace(/^v/, '');
+    if (!latest) return;
+    const parts = VERSION.split('.');
+    const latestParts = latest.split('.');
+    for (let i = 0; i < 3; i++) {
+      const a = parseInt(parts[i]) || 0;
+      const b = parseInt(latestParts[i]) || 0;
+      if (b > a) {
+        document.getElementById('update-msg').textContent = \`New version available: v\${latest}\`;
+        document.getElementById('update-banner').style.display = 'flex';
+        return;
+      }
+      if (a > b) return;
+    }
+  } catch {}
 }
 
 // ── Toast ──

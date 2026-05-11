@@ -4,7 +4,8 @@
 subhatch/
 ├── src/
 │   ├── core.js           # Platform-agnostic business logic
-│   ├── export.js         # Sing-box JSON export converter
+│   ├── export.js         # Sing-box JSON outbound converter
+│   ├── momo.js           # OpenWrt-momo config.json generator
 │   └── ui.html.js        # Web UI HTML template
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers entry

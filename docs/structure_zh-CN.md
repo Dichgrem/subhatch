@@ -4,7 +4,8 @@
 subhatch/
 ├── src/
 │   ├── core.js           # 平台无关业务逻辑
-│   ├── export.js         # Sing-box JSON 导出转换器
+│   ├── export.js         # Sing-box JSON 出站转换器
+│   ├── momo.js           # OpenWrt-momo config.json 生成器
 │   └── ui.html.js        # Web UI HTML 模板
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers 入口

@@ -4,6 +4,7 @@
  */
 
 import { exportSingBox } from "./export.js";
+import { buildMomoConfig } from "./momo.js";
 import { HTML_PAGE } from "./ui.html.js";
 
 // ─────────────────────────────────────────────
@@ -508,6 +509,83 @@ async function handleExportSingBox(req, env) {
 	});
 }
 
+/** GET /api/export/momo — export complete config.json for OpenWrt-momo
+ *  Auth: session token (Bearer header) or sub-token (?token= query param) */
+async function handleExportMomo(req, env) {
+	const url = new URL(req.url);
+	const queryToken = url.searchParams.get("token") || "";
+
+	const envNodes = parseEnvNodes(env.VLESS_NODES);
+	const stored = await getNodes(env.store);
+	const all = [...envNodes, ...stored].filter(Boolean);
+
+	let selected;
+
+	// 1) Session auth (UI download)
+	const sessionToken = getSessionToken(req);
+	if (await validateSession(env.store, sessionToken)) {
+		selected = all;
+	} else if (queryToken) {
+		// 2) Sub-token auth (momo curl)
+		const primary = await getSubToken(env.store, env.SUB_TOKEN);
+		const scoped = await getTokens(env.store);
+
+		if (primary && queryToken === primary) {
+			selected = all;
+		} else if (scoped[queryToken]) {
+			selected = all.filter((n) => scoped[queryToken].nodes.includes(n));
+		} else {
+			const ip = clientIP(req);
+			const brute = await checkBrute(env.store, ip);
+			if (brute.blocked) return jsonResp({ error: "Too many requests" }, 429);
+			await recordBrute(env.store, ip);
+			return jsonResp({ error: "Unauthorized" }, 401);
+		}
+	} else {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+
+	const options = {};
+	for (const key of [
+		"preset",
+		"selectorTag",
+		"redirectPort",
+		"tproxyPort",
+		"dnsPort",
+		"tunAddress",
+		"tunAddress6",
+		"dnsStrategy",
+		"listen",
+		"clashPort",
+		"clashSecret",
+	]) {
+		const val = url.searchParams.get(key);
+		if (val != null) options[key] = val;
+	}
+
+	// Preset aliases
+	if (options.preset === "ipv6" || options.preset === "dual")
+		options.preset = "ipv4+6";
+	if (options.preset === "ipv4" || options.preset === "single")
+		options.preset = "ipv4only";
+
+	const result = buildMomoConfig(selected, options);
+	return jsonResp({
+		ok: true,
+		count: result._meta.nodeCount,
+		errors: result._meta.errors || [],
+		config: {
+			log: result.log,
+			dns: result.dns,
+			ntp: result.ntp,
+			inbounds: result.inbounds,
+			outbounds: result.outbounds,
+			route: result.route,
+			experimental: result.experimental,
+		},
+	});
+}
+
 // ─────────────────────────────────────────────
 //  Node validation
 // ─────────────────────────────────────────────
@@ -567,6 +645,8 @@ export async function handleRequest(req, env) {
 		return handleSaveNodes(req, env);
 	if (path === "/api/export/sing-box" && method === "GET")
 		return handleExportSingBox(req, env);
+	if (path === "/api/export/momo" && method === "GET")
+		return handleExportMomo(req, env);
 	if (path === "/api/sub-url" && method === "GET")
 		return handleSubUrl(req, env);
 	if (path === "/api/sub-token" && method === "PUT")

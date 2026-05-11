@@ -19,6 +19,7 @@ All `/api/*` endpoints except `/api/ping` require a valid session token in the `
 | GET    | `/api/nodes`        | List env + stored nodes              |
 | PUT    | `/api/nodes`        | Save stored nodes (replaces all)     |
 | GET    | `/api/export/sing-box` | Export all nodes as sing-box JSON  |
+| GET    | `/api/export/momo`     | Export full config.json for OpenWrt-momo |
 | GET    | `/api/sub-url`      | Returns the primary subscription URL |
 | PUT    | `/api/sub-token`    | Rotate the primary subscription token|
 | GET    | `/api/sub-tokens`   | List all tokens (primary + scoped)   |
@@ -150,3 +151,64 @@ The returned JSON can be directly merged into a sing-box client config:
   "outbounds": [ <paste the outbounds array here> ]
 }
 ```
+
+## GET /api/export/momo
+
+Returns a complete sing-box `config.json` compatible with [luci-app-momo](https://github.com/CHN-beta/OpenWrt-momo) on OpenWrt. The config can be used directly as a subscription URL in momo's "Subscription" profile mode, or downloaded and placed in the "File" profile.
+
+**Auth:** Two modes supported:
+1. Session token (`Authorization: Bearer <token>`) — for Web UI download
+2. Sub-token (`?token=<sub_token>`) — for momo's curl subscription (also supports scoped tokens)
+
+**Momo subscription URL:**
+```
+https://your-domain.com/api/export/momo?token=<your_sub_token>
+```
+If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filter nodes. Add `&preset=ipv4%2b6` for dual-stack.
+
+### Query parameters
+
+| Param          | Default          | Description                                |
+|---------------|------------------|--------------------------------------------|
+| `preset`      | `ipv4only`       | `ipv4only` / `ipv4+6` / `dual` / `ipv4` / `ipv6` / `single` |
+| `selectorTag` | `GLOBAL`         | Selector outbound tag name                 |
+| `redirectPort`| 7890             | Redirect inbound port                      |
+| `tproxyPort`  | 7891             | TPROXY inbound port                        |
+| `dnsPort`     | 1053             | DNS inbound port                           |
+| `tunAddress`  | `172.31.0.1/30`  | TUN interface IPv4 address                 |
+| `tunAddress6` | —                | TUN interface IPv6 address (auto for `ipv4+6`) |
+| `dnsStrategy` | `ipv4_only`      | DNS strategy (`prefer_ipv4` for dual-stack) |
+| `listen`      | `0.0.0.0`        | Inbound listen address (`::` for dual-stack) |
+
+### Presets
+
+| Preset          | listen | dnsStrategy    | FakeIP v6      |
+|-----------------|--------|----------------|----------------|
+| `ipv4only`      | `0.0.0.0` | `ipv4_only` | no             |
+| `ipv4+6` / `dual` / `ipv6` | `::` | `prefer_ipv4` | yes |
+| `ipv4` / `single` | `0.0.0.0` | `ipv4_only` | no |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "count": 2,
+  "errors": [],
+  "config": {
+    "inbounds": [ ... ],
+    "outbounds": [ ... ],
+    "route": { ... },
+    "dns": { ... }
+  }
+}
+```
+
+The response includes:
+- `log`: logging config (disabled: false, level: info, timestamp: true)
+- `dns`: FakeIP setup (local UDP → ali DoH → Google DoH via proxy)
+- `ntp`: time sync (time.apple.com:123, 30m interval)
+- `inbounds`: `dns-in` (direct:1053), `redirect-in` (redirect:7890), `tproxy-in` (tproxy:7891), `tun-in` (tun, momo device)
+- `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
+- `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → final to selector
+- `experimental`: cache_file (fakeip persistence) + clash_api (zashboard dashboard on port 9095)

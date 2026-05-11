@@ -1,0 +1,220 @@
+/**
+ * subhatch — Momo/OpenWrt sing-box config generator
+ * Builds a complete config.json compatible with luci-app-momo.
+ * Momo copies the response directly to /etc/momo/run/config.json
+ * and then applies mixin.uc over it (log, NTP, experimental, DNS tweaks).
+ */
+
+import { exportSingBox } from "./export.js";
+
+const PRESETS = {
+	ipv4only: {
+		listen: "0.0.0.0",
+		dnsStrategy: "ipv4_only",
+		tunAddress: "172.31.0.1/30",
+		tunAddress6: "",
+		fakeipRange: "198.18.0.0/15",
+		fakeip6Range: "",
+	},
+	"ipv4+6": {
+		listen: "::",
+		dnsStrategy: "prefer_ipv4",
+		tunAddress: "172.31.0.1/30",
+		tunAddress6: "fdfe:dcba:9876::1/126",
+		fakeipRange: "198.18.0.0/15",
+		fakeip6Range: "fc00::/18",
+	},
+};
+
+/**
+ * @param {string[]} nodeUrls — raw proxy node URIs
+ * @param {object} options
+ * @param {string} [options.preset="ipv4only"]  — "ipv4only" | "ipv4+6"
+ * @param {string} [options.selectorTag="GLOBAL"]
+ * @param {number} [options.redirectPort=7890]
+ * @param {number} [options.tproxyPort=7891]
+ * @param {number} [options.dnsPort=1053]
+ * @param {string} [options.tunAddress]   — override TUN v4 addr
+ * @param {string} [options.tunAddress6]  — override TUN v6 addr
+ * @param {string} [options.dnsStrategy]  — override DNS strategy
+ * @param {string} [options.listen]       — override listen IP for inbounds
+ */
+export function buildMomoConfig(nodeUrls, options = {}) {
+	const presetName = PRESETS[options.preset] ? options.preset : "ipv4only";
+	const def = PRESETS[presetName];
+
+	const s = {
+		selectorTag: options.selectorTag || "GLOBAL",
+		redirectPort: int(options.redirectPort, 7890),
+		tproxyPort: int(options.tproxyPort, 7891),
+		dnsPort: int(options.dnsPort, 1053),
+		tunAddress: options.tunAddress || def.tunAddress,
+		tunAddress6: options.tunAddress6 ?? def.tunAddress6,
+		listen: options.listen || def.listen,
+		dnsStrategy: options.dnsStrategy || def.dnsStrategy,
+	};
+
+	// ── Outbounds ──
+	const { outbounds, errors } = exportSingBox(nodeUrls);
+
+	const nodeTags = outbounds.map((o) => o.tag);
+	const selector = {
+		tag: s.selectorTag,
+		type: "selector",
+		outbounds: [...nodeTags, "direct"],
+	};
+
+	const outboundsFinal = [
+		...outbounds,
+		selector,
+		{ tag: "direct", type: "direct" },
+	];
+
+	// ── Inbounds ──
+	const tunAddresses = [s.tunAddress];
+	if (s.tunAddress6) tunAddresses.push(s.tunAddress6);
+
+	const inbounds = [
+		{ tag: "dns-in", type: "direct", listen: s.listen, listen_port: s.dnsPort },
+		{
+			tag: "redirect-in",
+			type: "redirect",
+			listen: s.listen,
+			listen_port: s.redirectPort,
+		},
+		{
+			tag: "tproxy-in",
+			type: "tproxy",
+			listen: s.listen,
+			listen_port: s.tproxyPort,
+		},
+		{
+			tag: "tun-in",
+			type: "tun",
+			interface_name: "momo",
+			address: tunAddresses,
+			mtu: 9000,
+			auto_route: false,
+			auto_redirect: false,
+		},
+	];
+
+	// ── Route ──
+	const route = {
+		rules: [
+			{ action: "sniff", sniffer: ["http", "tls", "quic", "dns"] },
+			{ inbound: "dns-in", action: "hijack-dns" },
+			{ ip_is_private: true, outbound: "direct" },
+			{ rule_set: "geosite-cn", outbound: "direct" },
+			{ rule_set: "geoip-cn", outbound: "direct" },
+		],
+		rule_set: [
+			{
+				tag: "geosite-cn",
+				type: "remote",
+				format: "binary",
+				url: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs",
+				download_detour: "direct",
+			},
+			{
+				tag: "geoip-cn",
+				type: "remote",
+				format: "binary",
+				url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs",
+				download_detour: "direct",
+			},
+		],
+		final: s.selectorTag,
+		default_domain_resolver: { server: "public" },
+	};
+
+	// ── DNS ──
+	const fakeipServer = {
+		tag: "fakeip",
+		type: "fakeip",
+		inet4_range: def.fakeipRange,
+	};
+	if (def.fakeip6Range) fakeipServer.inet6_range = def.fakeip6Range;
+
+	const dns = {
+		servers: [
+			{ tag: "local", type: "udp", server: "223.5.5.5" },
+			{
+				tag: "public",
+				type: "https",
+				server: "dns.alidns.com",
+				domain_resolver: "local",
+			},
+			{
+				tag: "foreign",
+				type: "https",
+				server: "8.8.8.8",
+				detour: s.selectorTag,
+			},
+			fakeipServer,
+		],
+		rules: [
+			{ rule_set: "geosite-cn", server: "public" },
+			{ query_type: ["A", "AAAA"], server: "fakeip", rewrite_ttl: 1 },
+		],
+		final: "foreign",
+		strategy: s.dnsStrategy,
+		independent_cache: true,
+		reverse_mapping: true,
+	};
+
+	// ── Log ──
+	const log = {
+		disabled: false,
+		level: "info",
+		timestamp: true,
+	};
+
+	// ── NTP ──
+	const ntp = {
+		enabled: true,
+		server: "time.apple.com",
+		server_port: 123,
+		interval: "30m",
+	};
+
+	// ── Experimental ──
+	const clashListen = s.listen === "::" ? "[::]" : s.listen;
+
+	const experimental = {
+		cache_file: {
+			enabled: true,
+			path: "/etc/momo/run/cache.db",
+			store_fakeip: true,
+		},
+		clash_api: {
+			external_controller: `${clashListen}:${int(options.clashPort, 9095)}`,
+			external_ui: "/etc/momo/run/ui",
+			external_ui_download_url:
+				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
+			external_ui_download_detour: "direct",
+			secret: options.clashSecret || "",
+			default_mode: "rule",
+		},
+	};
+
+	return {
+		log,
+		dns,
+		ntp,
+		inbounds,
+		outbounds: outboundsFinal,
+		route,
+		experimental,
+		_meta: {
+			nodeCount: outbounds.length,
+			errors: errors.length > 0 ? errors : undefined,
+		},
+	};
+}
+
+function int(val, fallback) {
+	if (val == null) return fallback;
+	const n = parseInt(val, 10);
+	return Number.isFinite(n) ? n : fallback;
+}

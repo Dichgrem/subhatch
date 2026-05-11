@@ -19,6 +19,7 @@
 | GET    | `/api/nodes`         | 列出 env + 存储节点       |
 | PUT    | `/api/nodes`         | 保存节点（全量替换）      |
 | GET    | `/api/export/sing-box` | 导出所有节点为 sing-box JSON |
+| GET    | `/api/export/momo`     | 导出 OpenWrt-momo 完整 config.json |
 | GET    | `/api/sub-url`       | 返回主订阅地址            |
 | PUT    | `/api/sub-token`     | 轮换主订阅 Token          |
 | GET    | `/api/sub-tokens`    | 列出所有 Token（主+分）   |
@@ -150,3 +151,56 @@ DELETE /api/sub-tokens?token=<48位十六进制>
   "outbounds": [ <粘贴 outbounds 数组> ]
 }
 ```
+
+## GET /api/export/momo
+
+返回完整的 sing-box `config.json`，兼容 OpenWrt 上的 [luci-app-momo](https://github.com/CHN-beta/OpenWrt-momo)。可直接用作 momo 的「订阅」或「文件」模式配置 URL。
+
+**认证：** 支持两种方式：
+1. 会话 Token（`Authorization: Bearer <token>`）—— Web UI 下载
+2. 订阅 Token（`?token=<sub_token>`）—— momo 的 curl 订阅（也支持分 Token 过滤节点）
+
+**Momo 订阅链接格式：**
+```
+https://your-domain.com/api/export/momo?token=<你的订阅token>
+```
+如果使用了分 Token，把 `<你的订阅token>` 换成分 Token 即可过滤节点。追加 `&preset=ipv4%2b6` 可启用双栈。
+
+### 查询参数
+
+| 参数          | 默认值           | 说明                                 |
+|--------------|------------------|--------------------------------------|
+| `preset`     | `ipv4only`       | 预设：`ipv4only` / `ipv4+6` / `dual` / `ipv4` / `ipv6` / `single` |
+| `selectorTag`| `GLOBAL`         | 选择器出站标签名                       |
+| `redirectPort`| 7890            | Redirect 入站端口                      |
+| `tproxyPort` | 7891             | TPROXY 入站端口                       |
+| `dnsPort`    | 1053             | DNS 入站端口                          |
+| `tunAddress` | `172.31.0.1/30`  | TUN 接口 IPv4 地址                    |
+| `tunAddress6`| —                | TUN 接口 IPv6 地址（`ipv4+6` 预设自动） |
+| `dnsStrategy`| `ipv4_only`      | DNS 策略（双栈时为 `prefer_ipv4`）     |
+| `listen`     | `0.0.0.0`        | 入站监听地址（双栈时为 `::`）          |
+
+### 响应结构
+
+```json
+{
+  "ok": true,
+  "count": 2,
+  "errors": [],
+  "config": {
+    "inbounds": [ ... ],
+    "outbounds": [ ... ],
+    "route": { ... },
+    "dns": { ... }
+  }
+}
+```
+
+配置包含：
+- `log`：日志配置（disabled: false, level: info, timestamp: true）
+- `dns`：FakeIP 配置（本地 UDP → 阿里 DoH → Google DoH 走代理）
+- `ntp`：时间同步（time.apple.com:123，每 30 分钟）
+- `inbounds`：DNS 入站 + Redirect + TPROXY + TUN 入站
+- `outbounds`：所有转换后的节点 + 一个 `selector`（含所有节点 + `direct`）
+- `route`：嗅探 → 劫持 DNS → 私有 IP 直连 → geosite-cn → geoip-cn → 最终走选择器
+- `experimental`：缓存文件（FakeIP 持久化）+ Clash API（基于 zashboard 面板，端口 9095）

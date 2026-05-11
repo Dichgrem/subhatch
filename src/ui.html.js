@@ -264,6 +264,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive .node-name::after{content:'•••••••';position:absolute;left:0;top:50%;transform:translateY(-50%);font-size:.72rem;color:var(--muted);letter-spacing:4px;text-indent:0}
 .hide-sensitive #sub-url-text{position:relative}
 .hide-sensitive #sub-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #momo-url-text{position:relative}
+.hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 
 /* ── token manager ── */
 .token-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -332,6 +334,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
       <div class="topbar-right">
         <span class="user-dot"></span>
+        <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
@@ -349,6 +352,14 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="field-hint">
         Import this URL into husi / sing-box / NekoBox / Clash Meta etc.<br>
         Token is embedded in the URL — keep it private.
+      </div>
+      <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">OpenWrt-momo</div>
+        <div class="sub-url-wrap">
+          <code id="momo-url-text" style="font-size:11px">Loading…</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyMomoUrl()" title="Copy Momo URL">⎘</button>
+        </div>
+        <div class="field-hint">Paste into momo Subscription URL — returns full config.json.</div>
       </div>
     </div>
 
@@ -546,6 +557,7 @@ async function loadSubUrl() {
   if (!ok) return;
   subUrl = data.url;
   document.getElementById('sub-url-text').textContent = subUrl;
+  setMomoUrl();
 }
 
 async function loadTokens() {
@@ -848,6 +860,7 @@ async function rotateToken() {
   const base = new URL(subUrl).origin;
   subUrl = \`\${base}/sub?token=\${encodeURIComponent(data.token)}\`;
   document.getElementById("sub-url-text").textContent = subUrl;
+  setMomoUrl();
   toast("Token rotated", "ok");
 }
 
@@ -866,6 +879,23 @@ async function exportSingBox() {
   const msg = \`Exported \${data.count} outbound(s)\`;
   if (data.errors && data.errors.length) toast(msg + \` · \${data.errors.length} parse error(s)\`, "err");
   else toast(msg, "ok");
+}
+
+// ── Momo URL ──
+async function copyMomoUrl() {
+  if (!subUrl) return;
+  const momoUrl = subUrl.replace("/sub?", "/api/export/momo?");
+  try {
+    await navigator.clipboard.writeText(momoUrl);
+    toast("Momo URL copied", "ok");
+  } catch {
+    prompt("Copy this URL:", momoUrl);
+  }
+}
+
+function setMomoUrl() {
+  if (!subUrl) { document.getElementById("momo-url-text").textContent = "—"; return; }
+  document.getElementById("momo-url-text").textContent = subUrl.replace("/sub?", "/api/export/momo?");
 }
 
 // ── QR Code ──
@@ -908,6 +938,14 @@ function toggleHide() {
   const btn = document.getElementById('hide-btn');
   document.body.classList.toggle('hide-sensitive');
   btn.textContent = document.body.classList.contains('hide-sensitive') ? 'Show' : 'Hide';
+}
+
+function toggleMomo() {
+  const el = document.getElementById('momo-section');
+  const btn = document.getElementById('momo-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.textContent = show ? 'Momo ✓' : 'Momo';
 }
 
 // ── Version check ──

@@ -116,7 +116,6 @@ function parseVless(u) {
 
 	const flow = p.get("flow") || "";
 	if (flow) out.flow = flow;
-	if (p.get("encryption") === "none") out.packet_encoding = "";
 
 	const tls = buildTLS(p);
 	if (tls) out.tls = tls;

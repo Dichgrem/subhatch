@@ -179,6 +179,9 @@ If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filt
 | `tunAddress6` | —                | TUN interface IPv6 address (auto for `ipv4+6`) |
 | `dnsStrategy` | `ipv4_only`      | DNS strategy (`prefer_ipv4` for dual-stack) |
 | `listen`      | `0.0.0.0`        | Inbound listen address (`::` for dual-stack) |
+| `fakeip`      | `true`           | Set `false` or `0` for real-DNS (no FakeIP, no A/AAAA rewrite) |
+| `clashPort`   | 9095             | Clash API listen port                     |
+| `clashSecret` | `""`             | Clash API secret
 
 ### Presets
 
@@ -190,23 +193,23 @@ If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filt
 
 ### Response
 
+The response is a raw sing-box config.json — no wrapper, ready for momo to use directly.
+
 ```json
 {
-  "ok": true,
-  "count": 2,
-  "errors": [],
-  "config": {
-    "inbounds": [ ... ],
-    "outbounds": [ ... ],
-    "route": { ... },
-    "dns": { ... }
-  }
+  "log": { "disabled": false, "level": "info", "timestamp": true },
+  "dns": { ... },
+  "ntp": { ... },
+  "inbounds": [ ... ],
+  "outbounds": [ ... ],
+  "route": { ... },
+  "experimental": { ... }
 }
 ```
 
 The response includes:
 - `log`: logging config (disabled: false, level: info, timestamp: true)
-- `dns`: FakeIP setup (local UDP → ali DoH → Google DoH via proxy)
+- `dns`: FakeIP by default (local → ali DoH → Google DoH → fakeip); non-FakeIP with `?fakeip=false` (no fakeip server, no A/AAAA rewrite)
 - `ntp`: time sync (time.apple.com:123, 30m interval)
 - `inbounds`: `dns-in` (direct:1053), `redirect-in` (redirect:7890), `tproxy-in` (tproxy:7891), `tun-in` (tun, momo device)
 - `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass

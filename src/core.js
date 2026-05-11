@@ -558,6 +558,7 @@ async function handleExportMomo(req, env) {
 		"listen",
 		"clashPort",
 		"clashSecret",
+		"fakeip",
 	]) {
 		const val = url.searchParams.get(key);
 		if (val != null) options[key] = val;
@@ -570,19 +571,10 @@ async function handleExportMomo(req, env) {
 		options.preset = "ipv4only";
 
 	const result = buildMomoConfig(selected, options);
-	return jsonResp({
-		ok: true,
-		count: result._meta.nodeCount,
-		errors: result._meta.errors || [],
-		config: {
-			log: result.log,
-			dns: result.dns,
-			ntp: result.ntp,
-			inbounds: result.inbounds,
-			outbounds: result.outbounds,
-			route: result.route,
-			experimental: result.experimental,
-		},
+	const { _meta, ...config } = result;
+	return new Response(JSON.stringify(config, null, 2), {
+		status: 200,
+		headers: { "Content-Type": "application/json" },
 	});
 }
 

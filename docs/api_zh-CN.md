@@ -179,26 +179,27 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 | `tunAddress6`| —                | TUN 接口 IPv6 地址（`ipv4+6` 预设自动） |
 | `dnsStrategy`| `ipv4_only`      | DNS 策略（双栈时为 `prefer_ipv4`）     |
 | `listen`     | `0.0.0.0`        | 入站监听地址（双栈时为 `::`）          |
+| `fakeip`     | `true`           | 设为 `false` 或 `0` 使用真实 DNS（无 FakeIP，无 A/AAAA 重写） |
 
 ### 响应结构
 
+返回的是原始 sing-box config.json，无包装，momo 可直接使用。
+
 ```json
 {
-  "ok": true,
-  "count": 2,
-  "errors": [],
-  "config": {
-    "inbounds": [ ... ],
-    "outbounds": [ ... ],
-    "route": { ... },
-    "dns": { ... }
-  }
+  "log": { "disabled": false, "level": "info", "timestamp": true },
+  "dns": { ... },
+  "ntp": { ... },
+  "inbounds": [ ... ],
+  "outbounds": [ ... ],
+  "route": { ... },
+  "experimental": { ... }
 }
 ```
 
 配置包含：
 - `log`：日志配置（disabled: false, level: info, timestamp: true）
-- `dns`：FakeIP 配置（本地 UDP → 阿里 DoH → Google DoH 走代理）
+- `dns`：默认 FakeIP（本地 UDP → 阿里 DoH → Google DoH → FakeIP）；加 `?fakeip=false` 关闭（无 FakeIP 服务器，无 A/AAAA 重写）
 - `ntp`：时间同步（time.apple.com:123，每 30 分钟）
 - `inbounds`：DNS 入站 + Redirect + TPROXY + TUN 入站
 - `outbounds`：所有转换后的节点 + 一个 `selector`（含所有节点 + `direct`）

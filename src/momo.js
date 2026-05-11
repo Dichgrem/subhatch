@@ -38,6 +38,7 @@ const PRESETS = {
  * @param {string} [options.tunAddress6]  — override TUN v6 addr
  * @param {string} [options.dnsStrategy]  — override DNS strategy
  * @param {string} [options.listen]       — override listen IP for inbounds
+ * @param {string} [options.fakeip]       — set "false" or "0" for real-DNS mode (no FakeIP)
  */
 export function buildMomoConfig(nodeUrls, options = {}) {
 	const presetName = PRESETS[options.preset] ? options.preset : "ipv4only";
@@ -128,39 +129,49 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		default_domain_resolver: { server: "public" },
 	};
 
+	const useFakeip = options.fakeip !== "false" && options.fakeip !== "0";
+
 	// ── DNS ──
-	const fakeipServer = {
-		tag: "fakeip",
-		type: "fakeip",
-		inet4_range: def.fakeipRange,
-	};
-	if (def.fakeip6Range) fakeipServer.inet6_range = def.fakeip6Range;
+	const dnsServers = [
+		{ tag: "local", type: "udp", server: "223.5.5.5" },
+		{
+			tag: "public",
+			type: "https",
+			server: "dns.alidns.com",
+			domain_resolver: "local",
+		},
+		{
+			tag: "foreign",
+			type: "https",
+			server: "8.8.8.8",
+			detour: s.selectorTag,
+		},
+	];
+
+	const dnsRules = [{ rule_set: "geosite-cn", server: "public" }];
+
+	if (useFakeip) {
+		const fakeipServer = {
+			tag: "fakeip",
+			type: "fakeip",
+			inet4_range: def.fakeipRange,
+		};
+		if (def.fakeip6Range) fakeipServer.inet6_range = def.fakeip6Range;
+		dnsServers.push(fakeipServer);
+		dnsRules.push({
+			query_type: ["A", "AAAA"],
+			server: "fakeip",
+			rewrite_ttl: 1,
+		});
+	}
 
 	const dns = {
-		servers: [
-			{ tag: "local", type: "udp", server: "223.5.5.5" },
-			{
-				tag: "public",
-				type: "https",
-				server: "dns.alidns.com",
-				domain_resolver: "local",
-			},
-			{
-				tag: "foreign",
-				type: "https",
-				server: "8.8.8.8",
-				detour: s.selectorTag,
-			},
-			fakeipServer,
-		],
-		rules: [
-			{ rule_set: "geosite-cn", server: "public" },
-			{ query_type: ["A", "AAAA"], server: "fakeip", rewrite_ttl: 1 },
-		],
+		servers: dnsServers,
+		rules: dnsRules,
 		final: "foreign",
 		strategy: s.dnsStrategy,
 		independent_cache: true,
-		reverse_mapping: true,
+		reverse_mapping: useFakeip,
 	};
 
 	// ── Log ──
@@ -185,7 +196,7 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		cache_file: {
 			enabled: true,
 			path: "/etc/momo/run/cache.db",
-			store_fakeip: true,
+			store_fakeip: useFakeip,
 		},
 		clash_api: {
 			external_controller: `${clashListen}:${int(options.clashPort, 9095)}`,

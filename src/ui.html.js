@@ -161,6 +161,12 @@ textarea{
 .btn.loading .label{opacity:.5}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ── save status ── */
+.save-status{font-size:.65rem;opacity:0;transition:opacity .2s}
+.save-status.saving{opacity:1;color:var(--amber)}
+.save-status.ok{opacity:1;color:var(--green)}
+.save-status.err{opacity:1;color:var(--red)}
+
 /* ── sub URL display ── */
 .sub-url-wrap{
   display:flex;align-items:center;gap:10px;
@@ -379,12 +385,10 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-label" style="margin-bottom:0">Nodes</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
           <button class="btn btn-ghost btn-sm" onclick="showBulkModal()">Bulk Import</button>
+          <span id="save-status"></span>
           <button class="btn btn-ghost btn-sm" onclick="exportSingBox()">Export JSON</button>
-          <button class="btn btn-primary btn-sm" id="save-btn" onclick="saveNodes()">
-            <span class="spin"></span><span class="label">Save</span>
-          </button>
         </div>
       </div>
 
@@ -454,7 +458,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
-const VERSION = "3.0.0";
+const VERSION = "3.5.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -677,24 +681,37 @@ function addNode() {
   storedNodes.push(val);
   input.value = '';
   renderNodes();
+  saveNodes();
 }
 
 // ── Delete node ──
 function delNode(idx) {
   storedNodes.splice(idx, 1);
   renderNodes();
+  saveNodes();
 }
 
 // ── Save nodes ──
 async function saveNodes() {
-  const btn = document.getElementById('save-btn');
-  btn.classList.add('loading'); btn.disabled = true;
+  const s = document.getElementById('save-status');
+  s.textContent = 'Saving...';
+  s.className = 'save-status saving';
   try {
     const { ok, data } = await api('PUT', '/api/nodes', { nodes: storedNodes });
-    if (!ok) { toast(data.error || 'Save failed', 'err'); return; }
-    toast(\`Saved \${data.saved} node(s)\`, 'ok');
-  } catch { toast('Network error', 'err'); }
-  finally { btn.classList.remove('loading'); btn.disabled = false; }
+    if (!ok) {
+      s.textContent = 'Save error';
+      s.className = 'save-status err';
+      toast(data.error || 'Save failed', 'err');
+      return;
+    }
+    s.textContent = 'Saved';
+    s.className = 'save-status ok';
+    setTimeout(() => { s.textContent = ''; s.className = 'save-status'; }, 2000);
+  } catch {
+    s.textContent = 'Save error';
+    s.className = 'save-status err';
+    toast('Network error', 'err');
+  }
 }
 
 // ── Bulk import ──
@@ -725,6 +742,7 @@ function doBulkImport() {
   fresh.forEach(n => storedNodes.push(n));
   renderNodes();
   hideBulkModal();
+  saveNodes();
   toast(\`Imported \${fresh.length} node(s)\${dupes.length ? \`, skipped \${dupes.length} dupes\` : ''}\`, 'ok');
 }
 

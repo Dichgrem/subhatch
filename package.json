@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "subhatch",
-	"version": "3.0.0",
+	"version": "3.5.0",
 	"description": "Lightweight self-hosted proxy subscription manager. Multi-platform: Cloudflare Workers, Node.js, Docker.",
 	"license": "BSD 3-Clause License",
 	"keywords": [

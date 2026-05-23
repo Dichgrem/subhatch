@@ -63,8 +63,9 @@ function toBase64(str) {
 }
 
 function normalizePreset(p) {
-	if (p === "ipv6" || p === "dual") return "ipv4+6";
-	if (p === "ipv4" || p === "single") return "ipv4only";
+	if (p === "ipv6" || p === "dual" || p === "ipv4+6") return "ipv4plus_realip";
+	if (p === "ipv4" || p === "single" || p === "ipv4only")
+		return "ipv4only_realip";
 	return p;
 }
 

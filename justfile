@@ -46,7 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-delete-token test-logout
+test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-logout
 
 # GET /api/ping — health check
 test-ping:
@@ -186,6 +186,22 @@ test-export-sing-box:
 		-H "Content-Type: application/json" \
 		-d '{"password":"{{PW}}"}' | jq -r .token)
 	curl -s {{BASE}}/api/export/sing-box -H "Authorization: Bearer $TOKEN" | jq '{count, errors: (.errors | length)}'
+
+# GET /api/export/momo — momo config (default realip)
+test-export-momo:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/export/momo -H "Authorization: Bearer $TOKEN" | jq '{inbounds: [.inbounds[].tag], dns_servers: [.dns.servers[].tag], preset_check: (.dns.servers | map(.tag) | index("fakeip"))}'
+
+# GET /api/export/kernel — kernel config (default realip)
+test-export-kernel:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/export/kernel -H "Authorization: Bearer $TOKEN" | jq '{inbounds: [.inbounds[].tag], dns_servers: [.dns.servers[].tag], preset_check: (.dns.servers | map(.tag) | index("fakeip"))}'
 
 # CLI test: convert sample node URLs to sing-box JSON (no server needed)
 test-export-cli:

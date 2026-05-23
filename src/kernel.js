@@ -7,19 +7,37 @@
 import { exportSingBox } from "./export.js";
 
 const PRESETS = {
-	ipv4only: {
+	ipv4only_realip: {
 		listen: "0.0.0.0",
 		dnsStrategy: "ipv4_only",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "",
+		fakeip: false,
 		fakeipRange: "198.18.0.0/15",
-		fakeip6Range: "",
 	},
-	"ipv4+6": {
+	ipv4only_fakeip: {
+		listen: "0.0.0.0",
+		dnsStrategy: "ipv4_only",
+		tunAddress: "172.19.0.1/30",
+		tunAddress6: "",
+		fakeip: true,
+		fakeipRange: "198.18.0.0/15",
+	},
+	ipv4plus_realip: {
 		listen: "::",
 		dnsStrategy: "prefer_ipv4",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "fdfe:dcba:9876::1/126",
+		fakeip: false,
+		fakeipRange: "198.18.0.0/15",
+		fakeip6Range: "fc00::/18",
+	},
+	ipv4plus_fakeip: {
+		listen: "::",
+		dnsStrategy: "prefer_ipv4",
+		tunAddress: "172.19.0.1/30",
+		tunAddress6: "fdfe:dcba:9876::1/126",
+		fakeip: true,
 		fakeipRange: "198.18.0.0/15",
 		fakeip6Range: "fc00::/18",
 	},
@@ -28,7 +46,7 @@ const PRESETS = {
 /**
  * @param {string[]} nodeUrls — raw proxy node URIs
  * @param {object} options
- * @param {string} [options.preset="ipv4only"]  — "ipv4only" | "ipv4+6"
+ * @param {string} [options.preset="ipv4only_realip"]  — "ipv4only_realip" | "ipv4only_fakeip" | "ipv4plus_realip" | "ipv4plus_fakeip"
  * @param {string} [options.selectorTag="GLOBAL"]
  * @param {number} [options.dnsPort=1053]
  * @param {number} [options.mixedPort=7890]
@@ -42,7 +60,9 @@ const PRESETS = {
  * @param {string} [options.tunName="stun"]
  */
 export function buildKernelConfig(nodeUrls, options = {}) {
-	const presetName = PRESETS[options.preset] ? options.preset : "ipv4only";
+	const presetName = PRESETS[options.preset]
+		? options.preset
+		: "ipv4only_realip";
 	const def = PRESETS[presetName];
 
 	const s = {
@@ -136,7 +156,12 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 		default_domain_resolver: "public",
 	};
 
-	const useFakeip = options.fakeip !== "false" && options.fakeip !== "0";
+	const useFakeip =
+		options.fakeip === "false" || options.fakeip === "0"
+			? false
+			: options.fakeip === "true" || options.fakeip === "1"
+				? true
+				: def.fakeip;
 
 	// ── DNS ──
 	const dnsServers = [

@@ -164,32 +164,33 @@ Returns a complete sing-box `config.json` compatible with [luci-app-momo](https:
 ```
 https://your-domain.com/api/export/momo?token=<your_sub_token>
 ```
-If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filter nodes. Add `&preset=ipv4%2b6` for dual-stack.
+If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filter nodes. Add `&preset=ipv4plus_realip` for dual-stack with real DNS, or `&preset=ipv4plus_fakeip` for dual-stack with FakeIP.
 
 ### Query parameters
 
-| Param          | Default          | Description                                |
-|---------------|------------------|--------------------------------------------|
-| `preset`      | `ipv4only`       | `ipv4only` / `ipv4+6` / `dual` / `ipv4` / `ipv6` / `single` |
-| `selectorTag` | `GLOBAL`         | Selector outbound tag name                 |
-| `redirectPort`| 7890             | Redirect inbound port                      |
-| `tproxyPort`  | 7891             | TPROXY inbound port                        |
-| `dnsPort`     | 1053             | DNS inbound port                           |
-| `tunAddress`  | `172.31.0.1/30`  | TUN interface IPv4 address                 |
-| `tunAddress6` | —                | TUN interface IPv6 address (auto for `ipv4+6`) |
-| `dnsStrategy` | `ipv4_only`      | DNS strategy (`prefer_ipv4` for dual-stack) |
-| `listen`      | `0.0.0.0`        | Inbound listen address (`::` for dual-stack) |
-| `fakeip`      | `true`           | Set `false` or `0` for real-DNS (no FakeIP, no A/AAAA rewrite) |
-| `clashPort`   | 9095             | Clash API listen port                     |
-| `clashSecret` | `""`             | Clash API secret
+| Param          | Default              | Description                                |
+|---------------|----------------------|--------------------------------------------|
+| `preset`      | `ipv4only_realip`    | Preset (see below) |
+| `selectorTag` | `GLOBAL`             | Selector outbound tag name                 |
+| `redirectPort`| 7890                 | Redirect inbound port                      |
+| `tproxyPort`  | 7891                 | TPROXY inbound port                        |
+| `dnsPort`     | 1053                 | DNS inbound port                           |
+| `tunAddress`  | `172.31.0.1/30`      | TUN interface IPv4 address                 |
+| `tunAddress6` | —                    | TUN interface IPv6 address (auto for dual-stack) |
+| `dnsStrategy` | preset-dependent     | DNS strategy (`ipv4_only` / `prefer_ipv4`) |
+| `listen`      | preset-dependent     | Inbound listen address (`0.0.0.0` / `::`)  |
+| `fakeip`      | preset-dependent     | Override: `true`/`1` force FakeIP, `false`/`0` force real DNS |
+| `clashPort`   | 9095                 | Clash API listen port                     |
+| `clashSecret` | `""`                 | Clash API secret
 
 ### Presets
 
-| Preset          | listen | dnsStrategy    | FakeIP v6      |
-|-----------------|--------|----------------|----------------|
-| `ipv4only`      | `0.0.0.0` | `ipv4_only` | no             |
-| `ipv4+6` / `dual` / `ipv6` | `::` | `prefer_ipv4` | yes |
-| `ipv4` / `single` | `0.0.0.0` | `ipv4_only` | no |
+| Preset              | listen  | dnsStrategy    | FakeIP | TUN v6        |
+|---------------------|---------|----------------|--------|---------------|
+| `ipv4only_realip`   | `0.0.0.0` | `ipv4_only` | no     | no            |
+| `ipv4only_fakeip`   | `0.0.0.0` | `ipv4_only` | yes    | no            |
+| `ipv4plus_realip`   | `::`    | `prefer_ipv4`  | no     | yes           |
+| `ipv4plus_fakeip`   | `::`    | `prefer_ipv4`  | yes    | yes           |
 
 ### Response
 
@@ -209,9 +210,64 @@ The response is a raw sing-box config.json — no wrapper, ready for momo to use
 
 The response includes:
 - `log`: logging config (disabled: false, level: info, timestamp: true)
-- `dns`: FakeIP by default (local → ali DoH → Google DoH → fakeip); non-FakeIP with `?fakeip=false` (no fakeip server, no A/AAAA rewrite)
+- `dns`: local UDP → ali DoH → Google DoH; FakeIP server + A/AAAA rules only if preset enables it (or `?fakeip=true` overrides)
 - `ntp`: time sync (time.apple.com:123, 30m interval)
 - `inbounds`: `dns-in` (direct:1053), `redirect-in` (redirect:7890), `tproxy-in` (tproxy:7891), `tun-in` (tun, momo device)
 - `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
 - `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → final to selector
 - `experimental`: cache_file (fakeip persistence) + clash_api (zashboard dashboard on port 9095)
+
+---
+
+## GET /api/export/kernel
+
+Returns a complete sing-box `config.json` for the sing-box kernel on Linux desktop / HPC. Drop into `/etc/sing-box/config.json` or point `sing-box run -c` at it.
+
+**Auth:** Same two modes as `/api/export/momo` (session token or sub-token).
+
+**Kernel subscription URL:**
+```
+https://your-domain.com/api/export/kernel?token=<your_sub_token>
+```
+
+### Query parameters
+
+| Param          | Default              | Description                                |
+|---------------|----------------------|--------------------------------------------|
+| `preset`      | `ipv4only_realip`    | Preset (see below) |
+| `selectorTag` | `GLOBAL`             | Selector outbound tag name                 |
+| `dnsPort`     | 1053                 | DNS inbound port                           |
+| `mixedPort`   | 7890                 | HTTP/SOCKS mixed inbound port              |
+| `tunAddress`  | `172.19.0.1/30`      | TUN interface IPv4 address                 |
+| `tunAddress6` | —                    | TUN interface IPv6 address (auto for dual-stack) |
+| `dnsStrategy` | preset-dependent     | DNS strategy (`ipv4_only` / `prefer_ipv4`) |
+| `listen`      | preset-dependent     | Inbound listen address (`0.0.0.0` / `::`)  |
+| `fakeip`      | preset-dependent     | Override: `true`/`1` force FakeIP, `false`/`0` force real DNS |
+| `clashPort`   | 9191                 | Clash API listen port                     |
+| `clashSecret` | `""`                 | Clash API secret                          |
+| `tunName`     | `stun`               | TUN interface name
+
+### Presets
+
+Same 4 presets as momo: `ipv4only_realip`, `ipv4only_fakeip`, `ipv4plus_realip`, `ipv4plus_fakeip`.
+
+### Response
+
+```json
+{
+  "log": { "disabled": false, "level": "info", "timestamp": true },
+  "dns": { ... },
+  "inbounds": [ ... ],
+  "outbounds": [ ... ],
+  "route": { ... },
+  "experimental": { ... }
+}
+```
+
+The response includes:
+- `log`: logging config (disabled: false, level: info, timestamp: true)
+- `dns`: local UDP → ali DoH → Google DoH; FakeIP server + A/AAAA rules if preset enables it
+- `inbounds`: `dns-in` (direct:1053), `tun-in` (tun, stun device, auto_route), `mixed` (HTTP/SOCKS proxy)
+- `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
+- `route`: hijack-dns → private-ip → geosite-cn → geoip-cn → sniff → final to selector; auto_detect_interface
+- `experimental`: cache_file + clash_api (zashboard dashboard on port 9191)

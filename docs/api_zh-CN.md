@@ -170,16 +170,25 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 
 | 参数          | 默认值           | 说明                                 |
 |--------------|------------------|--------------------------------------|
-| `preset`     | `ipv4only`       | 预设：`ipv4only` / `ipv4+6` / `dual` / `ipv4` / `ipv6` / `single` |
+| `preset`     | `ipv4only_realip` | 预设（见下表）                          |
 | `selectorTag`| `GLOBAL`         | 选择器出站标签名                       |
 | `redirectPort`| 7890            | Redirect 入站端口                      |
 | `tproxyPort` | 7891             | TPROXY 入站端口                       |
 | `dnsPort`    | 1053             | DNS 入站端口                          |
 | `tunAddress` | `172.31.0.1/30`  | TUN 接口 IPv4 地址                    |
 | `tunAddress6`| —                | TUN 接口 IPv6 地址（`ipv4+6` 预设自动） |
-| `dnsStrategy`| `ipv4_only`      | DNS 策略（双栈时为 `prefer_ipv4`）     |
-| `listen`     | `0.0.0.0`        | 入站监听地址（双栈时为 `::`）          |
-| `fakeip`     | `true`           | 设为 `false` 或 `0` 使用真实 DNS（无 FakeIP，无 A/AAAA 重写） |
+| `dnsStrategy`| 由预设决定          | DNS 策略（`ipv4_only` / `prefer_ipv4`） |
+| `listen`     | 由预设决定          | 入站监听地址（`0.0.0.0` / `::`）       |
+| `fakeip`     | 由预设决定          | 覆盖：`true`/`1` 强制 FakeIP，`false`/`0` 强制真实 DNS |
+
+### 预设
+
+| 预设              | listen  | dnsStrategy    | FakeIP | TUN v6        |
+|-------------------|---------|----------------|--------|---------------|
+| `ipv4only_realip` | `0.0.0.0` | `ipv4_only` | 否     | 否            |
+| `ipv4only_fakeip` | `0.0.0.0` | `ipv4_only` | 是     | 否            |
+| `ipv4plus_realip` | `::`    | `prefer_ipv4`  | 否     | 是            |
+| `ipv4plus_fakeip` | `::`    | `prefer_ipv4`  | 是     | 是            |
 
 ### 响应结构
 
@@ -199,9 +208,51 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 
 配置包含：
 - `log`：日志配置（disabled: false, level: info, timestamp: true）
-- `dns`：默认 FakeIP（本地 UDP → 阿里 DoH → Google DoH → FakeIP）；加 `?fakeip=false` 关闭（无 FakeIP 服务器，无 A/AAAA 重写）
+- `dns`：按预设启用/禁用 FakeIP（本地 UDP → 阿里 DoH → Google DoH；FakeIP 预设额外添加 FakeIP 服务器和 A/AAAA 重写）
 - `ntp`：时间同步（time.apple.com:123，每 30 分钟）
 - `inbounds`：DNS 入站 + Redirect + TPROXY + TUN 入站
 - `outbounds`：所有转换后的节点 + 一个 `selector`（含所有节点 + `direct`）
 - `route`：嗅探 → 劫持 DNS → 私有 IP 直连 → geosite-cn → geoip-cn → 最终走选择器
 - `experimental`：缓存文件（FakeIP 持久化）+ Clash API（基于 zashboard 面板，端口 9095）
+
+---
+
+## GET /api/export/kernel
+
+返回完整的 sing-box `config.json`，适用于 Linux 桌面 / HPC 上的 sing-box 内核。放到 `/etc/sing-box/config.json` 或作为 `sing-box run -c` 的目标文件。
+
+**认证：** 与 `/api/export/momo` 相同（会话 Token 或订阅 Token）。
+
+**Kernel 订阅链接格式：**
+```
+https://your-domain.com/api/export/kernel?token=<你的订阅token>
+```
+
+### 查询参数
+
+| 参数          | 默认值               | 说明                                 |
+|--------------|----------------------|--------------------------------------|
+| `preset`     | `ipv4only_realip`    | 预设（同 momo 四种预设）              |
+| `selectorTag`| `GLOBAL`             | 选择器出站标签名                       |
+| `dnsPort`    | 1053                 | DNS 入站端口                          |
+| `mixedPort`  | 7890                 | HTTP/SOCKS 混合入站端口               |
+| `tunAddress` | `172.19.0.1/30`      | TUN 接口 IPv4 地址                    |
+| `tunAddress6`| —                    | TUN 接口 IPv6 地址（双栈预设自动）     |
+| `dnsStrategy`| 由预设决定            | DNS 策略                              |
+| `listen`     | 由预设决定            | 入站监听地址                           |
+| `fakeip`     | 由预设决定            | 覆盖：`true`/`1` 强制 FakeIP，`false`/`0` 强制真实 DNS |
+| `clashPort`  | 9191                 | Clash API 监听端口                   |
+| `clashSecret`| `""`                 | Clash API 密钥                       |
+| `tunName`    | `stun`               | TUN 接口名称
+
+### 预设
+
+同 momo：`ipv4only_realip`、`ipv4only_fakeip`、`ipv4plus_realip`、`ipv4plus_fakeip`。
+
+### 响应
+
+与 momo 结构相同，差异如下：
+- `dns`：加 `?fakeip=true` 可覆盖预设启用 FakeIP
+- `inbounds`：无 redirect-in / tproxy-in；有 `mixed`（HTTP/SOCKS 代理）；TUN 开启 auto_route
+- `route`：启用 `auto_detect_interface`；无 NTP
+- `experimental`：Clash API 端口 9191；缓存路径 `/var/lib/sing-box/cache.db`

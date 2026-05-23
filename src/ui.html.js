@@ -364,6 +364,14 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
       <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <div class="card-label" style="font-size:11px;margin-bottom:6px">OpenWrt-momo</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <select id="momo-preset" onchange="setMomoUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
+            <option value="ipv4only_realip">IPv4 + RealIP</option>
+            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
+            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
+            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
+          </select>
+        </div>
         <div class="sub-url-wrap">
           <code id="momo-url-text" style="font-size:11px">Loading…</code>
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyMomoUrl()" title="Copy Momo URL">⎘</button>
@@ -372,6 +380,14 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
       <div id="kernel-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <div class="card-label" style="font-size:11px;margin-bottom:6px">sing-box Kernel (HPC)</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <select id="kernel-preset" onchange="setKernelUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
+            <option value="ipv4only_realip">IPv4 + RealIP</option>
+            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
+            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
+            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
+          </select>
+        </div>
         <div class="sub-url-wrap">
           <code id="kernel-url-text" style="font-size:11px">Loading…</code>
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
@@ -469,7 +485,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
-const VERSION = "3.7.0";
+const VERSION = "4.0.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -917,7 +933,8 @@ async function exportSingBox() {
 // ── Momo URL ──
 async function copyMomoUrl() {
   if (!subUrl) return;
-  const momoUrl = subUrl.replace("/sub?", "/api/export/momo?");
+  const preset = document.getElementById("momo-preset").value;
+  const momoUrl = subUrl.replace("/sub?", "/api/export/momo?") + "&preset=" + preset;
   try {
     await navigator.clipboard.writeText(momoUrl);
     toast("Momo URL copied", "ok");
@@ -928,13 +945,15 @@ async function copyMomoUrl() {
 
 function setMomoUrl() {
   if (!subUrl) { document.getElementById("momo-url-text").textContent = "—"; return; }
-  document.getElementById("momo-url-text").textContent = subUrl.replace("/sub?", "/api/export/momo?");
+  const preset = document.getElementById("momo-preset").value;
+  document.getElementById("momo-url-text").textContent = subUrl.replace("/sub?", "/api/export/momo?") + "&preset=" + preset;
 }
 
 // ── Kernel URL ──
 async function copyKernelUrl() {
   if (!subUrl) return;
-  const kernelUrl = subUrl.replace("/sub?", "/api/export/kernel?");
+  const preset = document.getElementById("kernel-preset").value;
+  const kernelUrl = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
   try {
     await navigator.clipboard.writeText(kernelUrl);
     toast("Kernel URL copied", "ok");
@@ -945,7 +964,8 @@ async function copyKernelUrl() {
 
 function setKernelUrl() {
   if (!subUrl) { document.getElementById("kernel-url-text").textContent = "—"; return; }
-  document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?");
+  const preset = document.getElementById("kernel-preset").value;
+  document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
 }
 
 // ── QR Code ──

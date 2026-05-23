@@ -5,6 +5,7 @@ subhatch/
 ├── src/
 │   ├── core.js           # Platform-agnostic business logic
 │   ├── export.js         # Sing-box JSON outbound converter
+│   ├── kernel.js          # HPC/desktop sing-box config.json generator
 │   ├── momo.js           # OpenWrt-momo config.json generator
 │   └── ui.html.js        # Web UI HTML template
 ├── api/

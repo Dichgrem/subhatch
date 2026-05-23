@@ -62,6 +62,12 @@ function toBase64(str) {
 	return Buffer.from(str, "utf8").toString("base64");
 }
 
+function normalizePreset(p) {
+	if (p === "ipv6" || p === "dual") return "ipv4+6";
+	if (p === "ipv4" || p === "single") return "ipv4only";
+	return p;
+}
+
 function clientIP(req) {
 	return (
 		req.headers.get("CF-Connecting-IP") ||
@@ -565,11 +571,7 @@ async function handleExportMomo(req, env) {
 		if (val != null) options[key] = val;
 	}
 
-	// Preset aliases
-	if (options.preset === "ipv6" || options.preset === "dual")
-		options.preset = "ipv4+6";
-	if (options.preset === "ipv4" || options.preset === "single")
-		options.preset = "ipv4only";
+	options.preset = normalizePreset(options.preset);
 
 	const result = buildMomoConfig(selected, options);
 	const { _meta, ...config } = result;
@@ -632,10 +634,7 @@ async function handleExportKernel(req, env) {
 		if (val != null) options[key] = val;
 	}
 
-	if (options.preset === "ipv6" || options.preset === "dual")
-		options.preset = "ipv4+6";
-	if (options.preset === "ipv4" || options.preset === "single")
-		options.preset = "ipv4only";
+	options.preset = normalizePreset(options.preset);
 
 	const result = buildKernelConfig(selected, options);
 	const { _meta, ...config } = result;

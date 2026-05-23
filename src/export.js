@@ -304,7 +304,7 @@ function parseSS(raw) {
 	const portNum = parseInt(port, 10) || 8388;
 	return {
 		type: "shadowsocks",
-		tag: name || (host ? `${host}:${portNum}` : ""),
+		tag: name || (host ? `${host}:${portNum}` : defaultTag(host, portNum)),
 		server: stripBrackets(host),
 		server_port: portNum,
 		method: method.toLowerCase(),

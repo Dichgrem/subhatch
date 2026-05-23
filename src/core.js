@@ -4,6 +4,7 @@
  */
 
 import { exportSingBox } from "./export.js";
+import { buildKernelConfig } from "./kernel.js";
 import { buildMomoConfig } from "./momo.js";
 import { HTML_PAGE } from "./ui.html.js";
 
@@ -578,6 +579,72 @@ async function handleExportMomo(req, env) {
 	});
 }
 
+/** GET /api/export/kernel — export complete config.json for sing-box HPC client
+ *  Auth: session token (Bearer header) or sub-token (?token= query param) */
+async function handleExportKernel(req, env) {
+	const url = new URL(req.url);
+	const queryToken = url.searchParams.get("token") || "";
+
+	const envNodes = parseEnvNodes(env.VLESS_NODES);
+	const stored = await getNodes(env.store);
+	const all = [...envNodes, ...stored].filter(Boolean);
+
+	let selected;
+
+	const sessionToken = getSessionToken(req);
+	if (await validateSession(env.store, sessionToken)) {
+		selected = all;
+	} else if (queryToken) {
+		const primary = await getSubToken(env.store, env.SUB_TOKEN);
+		const scoped = await getTokens(env.store);
+
+		if (primary && queryToken === primary) {
+			selected = all;
+		} else if (scoped[queryToken]) {
+			selected = all.filter((n) => scoped[queryToken].nodes.includes(n));
+		} else {
+			const ip = clientIP(req);
+			const brute = await checkBrute(env.store, ip);
+			if (brute.blocked) return jsonResp({ error: "Too many requests" }, 429);
+			await recordBrute(env.store, ip);
+			return jsonResp({ error: "Unauthorized" }, 401);
+		}
+	} else {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+
+	const options = {};
+	for (const key of [
+		"preset",
+		"selectorTag",
+		"dnsPort",
+		"mixedPort",
+		"tunAddress",
+		"tunAddress6",
+		"dnsStrategy",
+		"listen",
+		"clashPort",
+		"clashSecret",
+		"fakeip",
+		"tunName",
+	]) {
+		const val = url.searchParams.get(key);
+		if (val != null) options[key] = val;
+	}
+
+	if (options.preset === "ipv6" || options.preset === "dual")
+		options.preset = "ipv4+6";
+	if (options.preset === "ipv4" || options.preset === "single")
+		options.preset = "ipv4only";
+
+	const result = buildKernelConfig(selected, options);
+	const { _meta, ...config } = result;
+	return new Response(JSON.stringify(config, null, 2), {
+		status: 200,
+		headers: { "Content-Type": "application/json" },
+	});
+}
+
 // ─────────────────────────────────────────────
 //  Node validation
 // ─────────────────────────────────────────────
@@ -639,6 +706,8 @@ export async function handleRequest(req, env) {
 		return handleExportSingBox(req, env);
 	if (path === "/api/export/momo" && method === "GET")
 		return handleExportMomo(req, env);
+	if (path === "/api/export/kernel" && method === "GET")
+		return handleExportKernel(req, env);
 	if (path === "/api/sub-url" && method === "GET")
 		return handleSubUrl(req, env);
 	if (path === "/api/sub-token" && method === "PUT")

@@ -272,6 +272,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive #sub-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #momo-url-text{position:relative}
 .hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #kernel-url-text{position:relative}
+.hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 
 /* ── token manager ── */
 .token-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -341,6 +343,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="topbar-right">
         <span class="user-dot"></span>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
+        <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
@@ -366,6 +369,14 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyMomoUrl()" title="Copy Momo URL">⎘</button>
         </div>
         <div class="field-hint">Paste into momo Subscription URL — returns full config.json.</div>
+      </div>
+      <div id="kernel-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">sing-box Kernel (HPC)</div>
+        <div class="sub-url-wrap">
+          <code id="kernel-url-text" style="font-size:11px">Loading…</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
+        </div>
+        <div class="field-hint">Point sing-box at this URL — returns full config.json for Linux desktop / HPC.</div>
       </div>
     </div>
 
@@ -458,7 +469,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
-const VERSION = "3.5.0";
+const VERSION = "3.7.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -493,9 +504,13 @@ async function api(method, path, body) {
   };
   if (SESSION) opts.headers['Authorization'] = 'Bearer ' + SESSION;
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  const data = await r.json();
-  return { ok: r.ok, status: r.status, data };
+  try {
+    const r = await fetch(path, opts);
+    const data = await r.json();
+    return { ok: r.ok, status: r.status, data };
+  } catch {
+    return { ok: false, status: 0, data: { error: 'Network error' } };
+  }
 }
 
 async function verifySession() {
@@ -562,6 +577,7 @@ async function loadSubUrl() {
   subUrl = data.url;
   document.getElementById('sub-url-text').textContent = subUrl;
   setMomoUrl();
+  setKernelUrl();
 }
 
 async function loadTokens() {
@@ -581,7 +597,7 @@ function renderNodes() {
 
   const all = [...envNodes.map(n => ({n, env:true})), ...storedNodes.map(n => ({n, env:false}))];
 
-  if (all.length === 0) { empty.style.display = 'block'; } 
+  if (all.length === 0) { empty.style.display = 'block'; }
   else { empty.style.display = 'none'; }
 
   all.sort((a, b) => {
@@ -599,7 +615,6 @@ function renderNodes() {
 
     let name = n;
     try {
-      // Extract fragment/# as name
       const hash = n.lastIndexOf('#');
       if (hash !== -1) name = decodeURIComponent(n.slice(hash + 1));
       else {
@@ -622,7 +637,6 @@ function renderNodes() {
     });
   });
 
-  // Stats
   document.getElementById('stat-total').textContent = all.length;
   document.getElementById('stat-env').textContent = envNodes.length;
   document.getElementById('stat-stored').textContent = storedNodes.length;
@@ -879,6 +893,7 @@ async function rotateToken() {
   subUrl = \`\${base}/sub?token=\${encodeURIComponent(data.token)}\`;
   document.getElementById("sub-url-text").textContent = subUrl;
   setMomoUrl();
+  setKernelUrl();
   toast("Token rotated", "ok");
 }
 
@@ -914,6 +929,23 @@ async function copyMomoUrl() {
 function setMomoUrl() {
   if (!subUrl) { document.getElementById("momo-url-text").textContent = "—"; return; }
   document.getElementById("momo-url-text").textContent = subUrl.replace("/sub?", "/api/export/momo?");
+}
+
+// ── Kernel URL ──
+async function copyKernelUrl() {
+  if (!subUrl) return;
+  const kernelUrl = subUrl.replace("/sub?", "/api/export/kernel?");
+  try {
+    await navigator.clipboard.writeText(kernelUrl);
+    toast("Kernel URL copied", "ok");
+  } catch {
+    prompt("Copy this URL:", kernelUrl);
+  }
+}
+
+function setKernelUrl() {
+  if (!subUrl) { document.getElementById("kernel-url-text").textContent = "—"; return; }
+  document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?");
 }
 
 // ── QR Code ──
@@ -964,6 +996,14 @@ function toggleMomo() {
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
   btn.textContent = show ? 'Momo ✓' : 'Momo';
+}
+
+function toggleKernel() {
+  const el = document.getElementById('kernel-section');
+  const btn = document.getElementById('kernel-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.textContent = show ? 'Kernel ✓' : 'Kernel';
 }
 
 // ── Version check ──

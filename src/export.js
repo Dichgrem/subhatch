@@ -470,5 +470,18 @@ export function exportSingBox(nodes) {
 		}
 	}
 
+	// Deduplicate tags: sing-box requires unique outbound tags
+	const seen = new Set();
+	for (const o of outbounds) {
+		if (!seen.has(o.tag)) {
+			seen.add(o.tag);
+			continue;
+		}
+		let n = 2;
+		while (seen.has(`${o.tag}-${n}`)) n++;
+		o.tag = `${o.tag}-${n}`;
+		seen.add(o.tag);
+	}
+
 	return { outbounds, errors, skipped };
 }

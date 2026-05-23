@@ -1,8 +1,7 @@
 /**
- * subhatch — Momo/OpenWrt sing-box config generator
- * Builds a complete config.json compatible with luci-app-momo.
- * Momo copies the response directly to /etc/momo/run/config.json
- * and then applies mixin.uc over it (log, NTP, experimental, DNS tweaks).
+ * subhatch — HPC / Linux desktop sing-box config generator
+ * Builds a complete config.json for the sing-box kernel on desktop/Linux.
+ * Drop into /etc/sing-box/config.json or point sing-box run -c at it.
  */
 
 import { exportSingBox } from "./export.js";
@@ -11,7 +10,7 @@ const PRESETS = {
 	ipv4only: {
 		listen: "0.0.0.0",
 		dnsStrategy: "ipv4_only",
-		tunAddress: "172.31.0.1/30",
+		tunAddress: "172.19.0.1/30",
 		tunAddress6: "",
 		fakeipRange: "198.18.0.0/15",
 		fakeip6Range: "",
@@ -19,7 +18,7 @@ const PRESETS = {
 	"ipv4+6": {
 		listen: "::",
 		dnsStrategy: "prefer_ipv4",
-		tunAddress: "172.31.0.1/30",
+		tunAddress: "172.19.0.1/30",
 		tunAddress6: "fdfe:dcba:9876::1/126",
 		fakeipRange: "198.18.0.0/15",
 		fakeip6Range: "fc00::/18",
@@ -31,28 +30,30 @@ const PRESETS = {
  * @param {object} options
  * @param {string} [options.preset="ipv4only"]  — "ipv4only" | "ipv4+6"
  * @param {string} [options.selectorTag="GLOBAL"]
- * @param {number} [options.redirectPort=7890]
- * @param {number} [options.tproxyPort=7891]
  * @param {number} [options.dnsPort=1053]
+ * @param {number} [options.mixedPort=7890]
  * @param {string} [options.tunAddress]   — override TUN v4 addr
  * @param {string} [options.tunAddress6]  — override TUN v6 addr
  * @param {string} [options.dnsStrategy]  — override DNS strategy
  * @param {string} [options.listen]       — override listen IP for inbounds
  * @param {string} [options.fakeip]       — set "false" or "0" for real-DNS mode (no FakeIP)
+ * @param {number} [options.clashPort=9191]
+ * @param {string} [options.clashSecret]
+ * @param {string} [options.tunName="stun"]
  */
-export function buildMomoConfig(nodeUrls, options = {}) {
+export function buildKernelConfig(nodeUrls, options = {}) {
 	const presetName = PRESETS[options.preset] ? options.preset : "ipv4only";
 	const def = PRESETS[presetName];
 
 	const s = {
 		selectorTag: options.selectorTag || "GLOBAL",
-		redirectPort: int(options.redirectPort, 7890),
-		tproxyPort: int(options.tproxyPort, 7891),
 		dnsPort: int(options.dnsPort, 1053),
+		mixedPort: int(options.mixedPort, 7890),
 		tunAddress: options.tunAddress || def.tunAddress,
 		tunAddress6: options.tunAddress6 ?? def.tunAddress6,
 		listen: options.listen || def.listen,
 		dnsStrategy: options.dnsStrategy || def.dnsStrategy,
+		tunName: options.tunName || "stun",
 	};
 
 	// ── Outbounds ──
@@ -88,36 +89,31 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 	const inbounds = [
 		{ tag: "dns-in", type: "direct", listen: s.listen, listen_port: s.dnsPort },
 		{
-			tag: "redirect-in",
-			type: "redirect",
-			listen: s.listen,
-			listen_port: s.redirectPort,
-		},
-		{
-			tag: "tproxy-in",
-			type: "tproxy",
-			listen: s.listen,
-			listen_port: s.tproxyPort,
-		},
-		{
 			tag: "tun-in",
 			type: "tun",
-			interface_name: "momo",
+			interface_name: s.tunName,
 			address: tunAddresses,
 			mtu: 9000,
-			auto_route: false,
-			auto_redirect: false,
+			auto_route: true,
+			auto_redirect: true,
+			strict_route: false,
+		},
+		{
+			type: "mixed",
+			listen: s.listen,
+			listen_port: s.mixedPort,
 		},
 	];
 
 	// ── Route ──
 	const route = {
 		rules: [
-			{ action: "sniff", sniffer: ["http", "tls", "quic", "dns"] },
+			{ inbound: `tun-in`, port: 53, action: "hijack-dns" },
 			{ inbound: "dns-in", action: "hijack-dns" },
 			{ ip_is_private: true, outbound: "direct" },
 			{ rule_set: "geosite-cn", outbound: "direct" },
 			{ rule_set: "geoip-cn", outbound: "direct" },
+			{ action: "sniff", sniffer: ["http", "tls", "quic", "dns"] },
 		],
 		rule_set: [
 			{
@@ -136,7 +132,8 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 			},
 		],
 		final: s.selectorTag,
-		default_domain_resolver: { server: "public" },
+		auto_detect_interface: true,
+		default_domain_resolver: "public",
 	};
 
 	const useFakeip = options.fakeip !== "false" && options.fakeip !== "0";
@@ -158,7 +155,7 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		},
 	];
 
-	const dnsRules = [{ rule_set: "geosite-cn", server: "public" }];
+	const dnsRules = [{ rule_set: "geosite-cn", server: "local" }];
 
 	if (useFakeip) {
 		const fakeipServer = {
@@ -181,7 +178,7 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		final: "foreign",
 		strategy: s.dnsStrategy,
 		independent_cache: true,
-		reverse_mapping: useFakeip,
+		reverse_mapping: false,
 	};
 
 	// ── Log ──
@@ -191,26 +188,18 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		timestamp: true,
 	};
 
-	// ── NTP ──
-	const ntp = {
-		enabled: true,
-		server: "time.apple.com",
-		server_port: 123,
-		interval: "30m",
-	};
-
 	// ── Experimental ──
 	const clashListen = s.listen === "::" ? "[::]" : s.listen;
 
 	const experimental = {
 		cache_file: {
 			enabled: true,
-			path: "/etc/momo/run/cache.db",
+			path: "/var/lib/sing-box/cache.db",
 			store_fakeip: useFakeip,
 		},
 		clash_api: {
-			external_controller: `${clashListen}:${int(options.clashPort, 9095)}`,
-			external_ui: "/etc/momo/run/ui",
+			external_controller: `${clashListen}:${int(options.clashPort, 9191)}`,
+			external_ui: "/var/lib/sing-box/ui",
 			external_ui_download_url:
 				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
 			external_ui_download_detour: "direct",
@@ -222,7 +211,6 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 	return {
 		log,
 		dns,
-		ntp,
 		inbounds,
 		outbounds: outboundsFinal,
 		route,

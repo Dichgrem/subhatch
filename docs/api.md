@@ -10,7 +10,7 @@
 
 ## Admin endpoints (session required)
 
-All `/api/*` endpoints except `/api/ping` require a valid session token in the `Authorization: Bearer <token>` header.
+Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` (creates session), `/api/ping` (health check), `/api/export/momo` and `/api/export/kernel` (also accept sub-token via `?token=`).
 
 | Method | Path                | Description                          |
 |--------|---------------------|--------------------------------------|
@@ -20,6 +20,7 @@ All `/api/*` endpoints except `/api/ping` require a valid session token in the `
 | PUT    | `/api/nodes`        | Save stored nodes (replaces all)     |
 | GET    | `/api/export/sing-box` | Export all nodes as sing-box JSON  |
 | GET    | `/api/export/momo`     | Export full config.json for OpenWrt-momo |
+| GET    | `/api/export/kernel`   | Export full config.json for HPC/desktop sing-box |
 | GET    | `/api/sub-url`      | Returns the primary subscription URL |
 | PUT    | `/api/sub-token`    | Rotate the primary subscription token|
 | GET    | `/api/sub-tokens`   | List all tokens (primary + scoped)   |
@@ -95,8 +96,10 @@ DELETE /api/sub-tokens?token=<48-char-hex>
 
 - `POST /api/login`: 10 wrong attempts / 15 min per IP
 - `GET /sub`: invalid tokens count toward the same 10-attempt / 15 min per IP limit
+- `GET /api/export/momo`, `GET /api/export/kernel`: invalid `?token=` also shares the same counter
 - After 10 failures, returns `429 Too many requests`
-- Successful login or valid sub access clears the counter
+- Only a successful login clears the counter
+- All rate-limits share the same global counter per IP
 
 ## GET /api/export/sing-box
 
@@ -191,6 +194,8 @@ If you use scoped tokens, replace `<your_sub_token>` with a scoped token to filt
 | `ipv4only_fakeip`   | `0.0.0.0` | `ipv4_only` | yes    | no            |
 | `ipv4plus_realip`   | `::`    | `prefer_ipv4`  | no     | yes           |
 | `ipv4plus_fakeip`   | `::`    | `prefer_ipv4`  | yes    | yes           |
+
+Aliases (for backward compatibility): `ipv4only` / `ipv4` / `single` → `ipv4only_realip`; `ipv4+6` / `dual` / `ipv6` → `ipv4plus_realip`.
 
 ### Response
 

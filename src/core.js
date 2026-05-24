@@ -246,6 +246,9 @@ async function handleLogin(req, env) {
 /** POST /api/logout */
 async function handleLogout(req, env) {
 	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
 	await destroySession(env.store, token);
 	return jsonResp({ ok: true });
 }
@@ -333,13 +336,10 @@ async function handleSub(req, env) {
 		} else if (scoped[t]) {
 			allowed = scoped[t].nodes;
 		} else {
-			const hasScoped = Object.keys(scoped).length > 0;
-			if (hasScoped) {
-				const ip = clientIP(req);
-				const brute = await checkBrute(env.store, ip);
-				if (brute.blocked) return textResp("Too many requests", 429);
-				await recordBrute(env.store, ip);
-			}
+			const ip = clientIP(req);
+			const brute = await checkBrute(env.store, ip);
+			if (brute.blocked) return textResp("Too many requests", 429);
+			await recordBrute(env.store, ip);
 			return textResp("Unauthorized", 401);
 		}
 	}
@@ -553,6 +553,8 @@ async function handleExportMomo(req, env) {
 		return jsonResp({ error: "Unauthorized" }, 401);
 	}
 
+	if (queryToken) await clearBrute(env.store, clientIP(req));
+
 	const options = {};
 	for (const key of [
 		"preset",
@@ -615,6 +617,8 @@ async function handleExportKernel(req, env) {
 	} else {
 		return jsonResp({ error: "Unauthorized" }, 401);
 	}
+
+	if (queryToken) await clearBrute(env.store, clientIP(req));
 
 	const options = {};
 	for (const key of [

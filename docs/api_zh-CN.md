@@ -10,7 +10,7 @@
 
 ## 管理接口（需会话）
 
-所有 `/api/*` 接口（除 `/api/ping` 外）需要会话 Token：`Authorization: Bearer <token>`。
+大多数 `/api/*` 接口需要会话 Token。例外：`/api/login`（创建会话）、`/api/ping`（健康检查）、`/api/export/momo` 和 `/api/export/kernel`（也支持 `?token=` 查询参数认证）。
 
 | 方法   | 路径                 | 说明                     |
 |--------|----------------------|--------------------------|
@@ -20,6 +20,7 @@
 | PUT    | `/api/nodes`         | 保存节点（全量替换）      |
 | GET    | `/api/export/sing-box` | 导出所有节点为 sing-box JSON |
 | GET    | `/api/export/momo`     | 导出 OpenWrt-momo 完整 config.json |
+| GET    | `/api/export/kernel`   | 导出 HPC/桌面 sing-box 完整 config.json |
 | GET    | `/api/sub-url`       | 返回主订阅地址            |
 | PUT    | `/api/sub-token`     | 轮换主订阅 Token          |
 | GET    | `/api/sub-tokens`    | 列出所有 Token（主+分）   |
@@ -95,8 +96,10 @@ DELETE /api/sub-tokens?token=<48位十六进制>
 
 - `POST /api/login`：每 IP 15 分钟内最多 10 次错误尝试
 - `GET /sub`：无效 Token 计入同一限制
+- `GET /api/export/momo`、`GET /api/export/kernel`：无效 `?token=` 同样共享计数器
 - 超过限制返回 `429 Too many requests`
-- 登录成功或有效 sub 访问清除计数
+- 仅登录成功清除计数器
+- 所有频率限制共享同一计数器（按 IP）
 
 ## GET /api/export/sing-box
 
@@ -180,6 +183,8 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 | `dnsStrategy`| 由预设决定          | DNS 策略（`ipv4_only` / `prefer_ipv4`） |
 | `listen`     | 由预设决定          | 入站监听地址（`0.0.0.0` / `::`）       |
 | `fakeip`     | 由预设决定          | 覆盖：`true`/`1` 强制 FakeIP，`false`/`0` 强制真实 DNS |
+| `clashPort`  | 9095              | Clash API 监听端口                     |
+| `clashSecret`| `""`              | Clash API 密钥
 
 ### 预设
 
@@ -189,6 +194,8 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 | `ipv4only_fakeip` | `0.0.0.0` | `ipv4_only` | 是     | 否            |
 | `ipv4plus_realip` | `::`    | `prefer_ipv4`  | 否     | 是            |
 | `ipv4plus_fakeip` | `::`    | `prefer_ipv4`  | 是     | 是            |
+
+别名（向后兼容）：`ipv4only` / `ipv4` / `single` → `ipv4only_realip`；`ipv4+6` / `dual` / `ipv6` → `ipv4plus_realip`。
 
 ### 响应结构
 

@@ -19,6 +19,8 @@ const KV_SESSION_PFX = "session:";
 const KV_BRUTE_PFX = "brute:";
 const KV_SUB_TOKEN_KEY = "sub:token";
 const KV_TOKENS_KEY = "sub:tokens";
+const KV_AUDIT_KEY = "audit:log";
+const AUDIT_MAX = 500;
 
 // ─────────────────────────────────────────────
 //  Helpers
@@ -76,6 +78,24 @@ function clientIP(req) {
 		req.headers.get("X-Real-IP") ||
 		"unknown"
 	);
+}
+
+// ── Audit log ──
+async function appendAudit(store, action, ip, detail = "") {
+	const raw = await store.get(KV_AUDIT_KEY);
+	const entries = raw ? JSON.parse(raw) : [];
+	entries.unshift({ ts: Date.now(), action, ip, detail });
+	if (entries.length > AUDIT_MAX) entries.length = AUDIT_MAX;
+	await store.set(KV_AUDIT_KEY, JSON.stringify(entries));
+}
+
+async function getAuditLog(store) {
+	const raw = await store.get(KV_AUDIT_KEY);
+	return raw ? JSON.parse(raw) : [];
+}
+
+async function clearAuditLog(store) {
+	await store.del(KV_AUDIT_KEY);
 }
 
 // ─────────────────────────────────────────────
@@ -211,6 +231,7 @@ async function handleLogin(req, env) {
 	const ip = clientIP(req);
 	const brute = await checkBrute(env.store, ip);
 	if (brute.blocked) {
+		await appendAudit(env.store, "blocked", ip, "login");
 		return jsonResp(
 			{ error: "Too many attempts. Try again in 15 minutes." },
 			429,
@@ -235,10 +256,12 @@ async function handleLogin(req, env) {
 
 	if (inputHash !== ADMIN_HASH) {
 		await recordBrute(env.store, ip);
+		await appendAudit(env.store, "login-failed", ip);
 		return jsonResp({ error: "Incorrect password" }, 401);
 	}
 
 	await clearBrute(env.store, ip);
+	await appendAudit(env.store, "login", ip);
 	const token = await createSession(env.store);
 	return jsonResp({ token });
 }
@@ -250,6 +273,7 @@ async function handleLogout(req, env) {
 		return jsonResp({ error: "Unauthorized" }, 401);
 	}
 	await destroySession(env.store, token);
+	await appendAudit(env.store, "logout", clientIP(req));
 	return jsonResp({ ok: true });
 }
 
@@ -292,6 +316,12 @@ async function handleSaveNodes(req, env) {
 		env.store,
 		valid.map((n) => n.trim()),
 	);
+	await appendAudit(
+		env.store,
+		"nodes-save",
+		clientIP(req),
+		`${valid.length} nodes`,
+	);
 	return jsonResp({ ok: true, saved: valid.length });
 }
 
@@ -303,6 +333,7 @@ async function handleSubToken(req, env) {
 	}
 	const newToken = randomToken(16);
 	await setSubToken(env.store, newToken);
+	await appendAudit(env.store, "token-rotate", clientIP(req), "primary");
 	return jsonResp({ token: newToken });
 }
 
@@ -314,18 +345,24 @@ async function handleSub(req, env) {
 	const scoped = await getTokens(env.store);
 
 	let allowed;
+	let who = "";
 
 	if (primary) {
 		// Private mode — token required
 		if (!t) return textResp("Unauthorized", 401);
 		if (t === primary) {
 			allowed = "all";
+			who = "primary";
 		} else if (scoped[t]) {
 			allowed = scoped[t].nodes;
+			who = scoped[t].name || t.slice(0, 8);
 		} else {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) return textResp("Too many requests", 429);
+			if (brute.blocked) {
+				await appendAudit(env.store, "blocked", ip, "sub");
+				return textResp("Too many requests", 429);
+			}
 			await recordBrute(env.store, ip);
 			return textResp("Unauthorized", 401);
 		}
@@ -333,12 +370,17 @@ async function handleSub(req, env) {
 		// Public mode
 		if (!t) {
 			allowed = "all";
+			who = "public";
 		} else if (scoped[t]) {
 			allowed = scoped[t].nodes;
+			who = scoped[t].name || t.slice(0, 8);
 		} else {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) return textResp("Too many requests", 429);
+			if (brute.blocked) {
+				await appendAudit(env.store, "blocked", ip, "sub");
+				return textResp("Too many requests", 429);
+			}
 			await recordBrute(env.store, ip);
 			return textResp("Unauthorized", 401);
 		}
@@ -351,6 +393,14 @@ async function handleSub(req, env) {
 	let selected;
 	if (allowed === "all") selected = all;
 	else selected = all.filter((n) => allowed.includes(n));
+
+	const subIP = clientIP(req);
+	await appendAudit(
+		env.store,
+		"sub",
+		subIP,
+		`${who}: ${selected.length} nodes`,
+	);
 
 	if (selected.length === 0) {
 		return textResp("", 200, {
@@ -411,7 +461,7 @@ async function handleCreateToken(req, env) {
 	const tokens = await getTokens(env.store);
 	tokens[newToken] = { name, nodes };
 	await saveTokens(env.store, tokens);
-
+	await appendAudit(env.store, "token-create", clientIP(req), name || "scoped");
 	return jsonResp({ token: newToken, name, nodes });
 }
 
@@ -437,7 +487,12 @@ async function handleUpdateToken(req, env) {
 	if (name !== undefined) tokens[token].name = name;
 	if (nodes !== undefined) tokens[token].nodes = nodes;
 	await saveTokens(env.store, tokens);
-
+	await appendAudit(
+		env.store,
+		"token-update",
+		clientIP(req),
+		token.slice(0, 8),
+	);
 	return jsonResp({
 		token,
 		name: tokens[token].name,
@@ -469,7 +524,12 @@ async function handleRotateToken(req, env) {
 	tokens[fresh] = config;
 	delete tokens[old];
 	await saveTokens(env.store, tokens);
-
+	await appendAudit(
+		env.store,
+		"token-rotate",
+		clientIP(req),
+		config.name || old.slice(0, 8),
+	);
 	return jsonResp({ token: fresh, name: config.name, nodes: config.nodes });
 }
 
@@ -488,7 +548,7 @@ async function handleDeleteToken(req, env) {
 
 	delete tokens[t];
 	await saveTokens(env.store, tokens);
-
+	await appendAudit(env.store, "token-delete", clientIP(req), t.slice(0, 8));
 	return jsonResp({ ok: true });
 }
 
@@ -509,6 +569,12 @@ async function handleExportSingBox(req, env) {
 	const all = [...envNodes, ...stored].filter(Boolean);
 
 	const result = exportSingBox(all);
+	await appendAudit(
+		env.store,
+		"export-json",
+		clientIP(req),
+		`${result.outbounds.length} outbounds`,
+	);
 	return jsonResp({
 		ok: true,
 		count: result.outbounds.length,
@@ -545,7 +611,10 @@ async function handleExportMomo(req, env) {
 		} else {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) return jsonResp({ error: "Too many requests" }, 429);
+			if (brute.blocked) {
+				await appendAudit(env.store, "blocked", ip, "export-momo");
+				return jsonResp({ error: "Too many requests" }, 429);
+			}
 			await recordBrute(env.store, ip);
 			return jsonResp({ error: "Unauthorized" }, 401);
 		}
@@ -578,6 +647,13 @@ async function handleExportMomo(req, env) {
 
 	const result = buildMomoConfig(selected, options);
 	const { _meta, ...config } = result;
+	if (queryToken)
+		await appendAudit(
+			env.store,
+			"export-momo",
+			clientIP(req),
+			`${_meta.nodeCount} nodes`,
+		);
 	return new Response(JSON.stringify(config, null, 2), {
 		status: 200,
 		headers: { "Content-Type": "application/json" },
@@ -610,7 +686,10 @@ async function handleExportKernel(req, env) {
 		} else {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) return jsonResp({ error: "Too many requests" }, 429);
+			if (brute.blocked) {
+				await appendAudit(env.store, "blocked", ip, "export-kernel");
+				return jsonResp({ error: "Too many requests" }, 429);
+			}
 			await recordBrute(env.store, ip);
 			return jsonResp({ error: "Unauthorized" }, 401);
 		}
@@ -643,6 +722,13 @@ async function handleExportKernel(req, env) {
 
 	const result = buildKernelConfig(selected, options);
 	const { _meta, ...config } = result;
+	if (queryToken)
+		await appendAudit(
+			env.store,
+			"export-kernel",
+			clientIP(req),
+			`${_meta.nodeCount} nodes`,
+		);
 	return new Response(JSON.stringify(config, null, 2), {
 		status: 200,
 		headers: { "Content-Type": "application/json" },
@@ -726,11 +812,36 @@ export async function handleRequest(req, env) {
 		return handleRotateToken(req, env);
 	if (path === "/api/sub-tokens" && method === "DELETE")
 		return handleDeleteToken(req, env);
+	if (path === "/api/audit-log" && method === "GET")
+		return handleGetAuditLog(req, env);
+	if (path === "/api/audit-log" && method === "DELETE")
+		return handleClearAuditLog(req, env);
 
 	// Serve UI for all other GET paths
 	if (method === "GET") return serveUI();
 
 	return jsonResp({ error: "Not found" }, 404);
+}
+
+// ─────────────────────────────────────────────
+//  Audit log
+// ─────────────────────────────────────────────
+async function handleGetAuditLog(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+	const log = await getAuditLog(env.store);
+	return jsonResp({ log });
+}
+
+async function handleClearAuditLog(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+	await clearAuditLog(env.store);
+	return jsonResp({ ok: true });
 }
 
 // ─────────────────────────────────────────────

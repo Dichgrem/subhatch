@@ -28,6 +28,8 @@ Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` 
 | POST   | `/api/sub-tokens/rotate` | Rotate a scoped token's value      |
 | PUT    | `/api/sub-tokens`        | Update a scoped token              |
 | DELETE | `/api/sub-tokens`        | Delete a scoped token              |
+| GET    | `/api/audit-log`         | List audit log entries (500 max)   |
+| DELETE | `/api/audit-log`         | Clear all audit log entries
 
 ## Scoped tokens
 
@@ -276,3 +278,53 @@ The response includes:
 - `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
 - `route`: hijack-dns → private-ip → geosite-cn → geoip-cn → sniff → final to selector; auto_detect_interface
 - `experimental`: cache_file + clash_api (zashboard dashboard on port 9191)
+
+---
+
+## Audit log
+
+### GET /api/audit-log
+
+Returns recent audit entries (newest first, max 500).
+
+**Auth:** Session token required.
+
+**Response:**
+```json
+{
+  "log": [
+    {
+      "ts": 1700000000000,
+      "action": "login",
+      "ip": "1.2.3.4",
+      "detail": ""
+    }
+  ]
+}
+```
+
+### Recorded actions
+
+| Action | Detail | Trigger |
+|--------|--------|---------|
+| `login` | — | Successful admin login |
+| `login-failed` | — | Wrong password |
+| `blocked` | endpoint name | Rate-limited (429) |
+| `logout` | — | Session logout |
+| `sub` | `N nodes` | Subscription accessed |
+| `nodes-save` | `N nodes` | Nodes updated via UI |
+| `token-create` | token name | Scoped token created |
+| `token-update` | token prefix | Scoped token modified |
+| `token-rotate` | token name / prefix | Token rotated |
+| `token-delete` | token prefix | Scoped token deleted |
+| `export-momo` | `N nodes` | Momo config exported |
+| `export-kernel` | `N nodes` | Kernel config exported |
+| `export-json` | `N outbounds` | Sing-box JSON exported |
+
+### DELETE /api/audit-log
+
+Clears all audit entries. Session auth required.
+
+### Storage
+
+Audit log is stored under the `audit:log` KV key as a JSON array. Entries are capped at 500 — oldest entries are dropped when the limit is exceeded. No TTL — entries persist until manually cleared or evicted by the cap.

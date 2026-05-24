@@ -46,7 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-logout
+test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-logout
 
 # GET /api/ping — health check
 test-ping:
@@ -104,6 +104,22 @@ test-logout:
 		-H "Content-Type: application/json" \
 		-d '{"password":"{{PW}}"}' | jq -r .token)
 	curl -s -X POST {{BASE}}/api/logout -H "Authorization: Bearer $TOKEN" | jq
+
+# GET /api/audit-log — list audit entries
+test-audit-log:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/audit-log -H "Authorization: Bearer $TOKEN" | jq '{entries: (.log | length), actions: [.log[].action]}'
+
+# DELETE /api/audit-log — clear audit entries
+test-audit-clear:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s -X DELETE {{BASE}}/api/audit-log -H "Authorization: Bearer $TOKEN" | jq
 
 # PUT /api/sub-token — rotate token
 test-rotate-token:

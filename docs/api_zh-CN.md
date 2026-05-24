@@ -28,6 +28,8 @@
 | POST   | `/api/sub-tokens/rotate` | 轮换分 Token 的值         |
 | PUT    | `/api/sub-tokens`        | 更新分 Token              |
 | DELETE | `/api/sub-tokens`        | 删除分 Token              |
+| GET    | `/api/audit-log`         | 列出审计日志（最多 500 条） |
+| DELETE | `/api/audit-log`         | 清空审计日志
 
 ## 分 Token（Scoped Tokens）
 
@@ -263,3 +265,53 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 - `inbounds`：无 redirect-in / tproxy-in；有 `mixed`（HTTP/SOCKS 代理）；TUN 开启 auto_route
 - `route`：启用 `auto_detect_interface`；无 NTP
 - `experimental`：Clash API 端口 9191；缓存路径 `/var/lib/sing-box/cache.db`
+
+---
+
+## 审计日志
+
+### GET /api/audit-log
+
+返回最近的审计记录（最新在前，最多 500 条）。
+
+**认证：** 需要会话 Token。
+
+**响应：**
+```json
+{
+  "log": [
+    {
+      "ts": 1700000000000,
+      "action": "login",
+      "ip": "1.2.3.4",
+      "detail": ""
+    }
+  ]
+}
+```
+
+### 记录的操作
+
+| 操作 | 详情 | 触发时机 |
+|------|------|----------|
+| `login` | — | 登录成功 |
+| `login-failed` | — | 密码错误 |
+| `blocked` | 端点名 | 触发频率限制 (429) |
+| `logout` | — | 登出 |
+| `sub` | `N nodes` | 订阅被访问 |
+| `nodes-save` | `N nodes` | 通过 UI 更新节点 |
+| `token-create` | Token 名称 | 创建分 Token |
+| `token-update` | Token 前缀 | 修改分 Token |
+| `token-rotate` | Token 名称/前缀 | 轮换 Token |
+| `token-delete` | Token 前缀 | 删除分 Token |
+| `export-momo` | `N nodes` | 导出 Momo 配置 |
+| `export-kernel` | `N nodes` | 导出 Kernel 配置 |
+| `export-json` | `N outbounds` | 导出 sing-box JSON |
+
+### DELETE /api/audit-log
+
+清空所有审计记录。需要会话认证。
+
+### 存储
+
+审计日志存储在 `audit:log` KV 键下，为 JSON 数组。最多 500 条，超过时最旧的被移除。无 TTL，记录持久保存直至手动清除或被上限自动淘汰。

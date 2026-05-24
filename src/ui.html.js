@@ -344,6 +344,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <span class="user-dot"></span>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
+        <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
@@ -478,14 +479,28 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <button class="btn btn-ghost" onclick="closeTokenModal()">Cancel</button>
       </div>
     </div>
+    </div>
+
+    <!-- Audit log -->
+    <div class="card" id="log-section" style="display:none;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-label" style="margin-bottom:0">Audit Log</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="loadAuditLog()" title="Refresh">↻</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearAuditLog()" title="Clear">✕ Clear</button>
+        </div>
+      </div>
+      <div id="audit-list" style="margin-top:12px;max-height:400px;overflow-y:auto;font-size:.7rem;color:var(--text)">
+        <div style="text-align:center;color:var(--muted);padding:20px 0">Loading…</div>
+      </div>
+    </div>
   </div>
-</div>
 
 <div id="toast"></div>
 
 <script>
 // ── State ──
-const VERSION = "4.0.0";
+const VERSION = "4.5.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -1026,6 +1041,15 @@ function toggleKernel() {
   btn.textContent = show ? 'Kernel ✓' : 'Kernel';
 }
 
+function toggleLog() {
+  const el = document.getElementById('log-section');
+  const btn = document.getElementById('log-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.textContent = show ? 'Log ✓' : 'Log';
+  if (show) loadAuditLog();
+}
+
 // ── Version check ──
 document.getElementById('ver-tag').textContent = 'v' + VERSION;
 
@@ -1059,6 +1083,47 @@ function toast(msg, type = 'ok') {
   el.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+// ── Audit log ──
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  const parts = [
+    d.getFullYear(),
+    pad(d.getMonth() + 1),
+    pad(d.getDate()),
+  ].join('-');
+  const time = [pad(d.getHours()), pad(d.getMinutes()), pad(d.getSeconds())].join(':');
+  return parts + ' ' + time;
+}
+
+async function loadAuditLog() {
+  const list = document.getElementById('audit-list');
+  const { ok, data } = await api('GET', '/api/audit-log');
+  if (!ok) { list.innerHTML = '<div style="text-align:center;color:var(--red);padding:10px">Failed to load</div>'; return; }
+  const log = data.log || [];
+  if (log.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0">No entries yet.</div>';
+    return;
+  }
+  list.innerHTML = log.map(e => {
+    const ts = fmtTime(e.ts);
+    return \`<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);align-items:baseline">
+      <span style="color:var(--muted);min-width:110px;font-variant-numeric:tabular-nums">\${ts}</span>
+      <span style="color:var(--amber);min-width:80px">\${e.action}</span>
+      <span style="font-family:monospace">\${e.ip}</span>
+      \${e.detail ? \`<span style="color:var(--muted)">\${escHtml(e.detail)}</span>\` : ''}
+    </div>\`;
+  }).join('');
+}
+
+async function clearAuditLog() {
+  if (!confirm('Clear all audit logs?')) return;
+  const { ok } = await api('DELETE', '/api/audit-log');
+  if (!ok) { toast('Failed to clear', 'err'); return; }
+  document.getElementById('audit-list').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0">Cleared.</div>';
+  toast('Audit log cleared', 'ok');
 }
 
 // ── Close modals on bg click ──

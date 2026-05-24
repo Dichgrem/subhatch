@@ -30,8 +30,34 @@ Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` 
 | DELETE | `/api/sub-tokens`        | Delete a scoped token              |
 | GET    | `/api/audit-log`         | List audit log entries (500 max)   |
 | DELETE | `/api/audit-log`         | Clear all audit log entries
+| GET    | `/api/upload-token`      | View current upload token          |
+| PUT    | `/api/upload-token`      | Rotate upload token                |
 
 ## Scoped tokens
+
+Scoped tokens allow sharing specific nodes with different people. Each scoped token has:
+- `name` — optional display name
+- `nodes` — array of node URIs this token can access
+
+When a scoped token is used with `/sub?token=<scoped>`, only the assigned nodes are returned.
+
+The **primary** token (set via `SUB_TOKEN` env var, `sub:token` KV key, or rotated via `/api/sub-token`) grants access to **all** nodes.
+
+## Upload endpoint (token auth)
+
+`POST /api/upload` pushes node URIs into the stored node pool. It uses its own token (`UPLOAD_TOKEN` env var), independent from session or sub-token auth.
+
+**Auth:** `?token=<upload_token>` query param. If `UPLOAD_TOKEN` is not configured, returns `403 Upload not enabled`.
+
+**Request:** `{ "nodes": ["vless://...", "vmess://..."] }`
+
+**Response:** `{ "ok": true, "added": 5, "dupes": 2 }`
+
+**Behavior:**
+- Only valid scheme URIs are accepted (same as `isValidNode`)
+- Exact duplicates (already in store) are skipped and counted as `dupes`
+- Nodes with the same `#fragment` name get a `-2` / `-3` suffix appended
+- Uploads are recorded in the audit log as `upload`
 
 Scoped tokens allow sharing specific nodes with different people. Each scoped token has:
 - `name` — optional display name

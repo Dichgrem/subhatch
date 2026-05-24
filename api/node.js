@@ -102,7 +102,13 @@ function nodeToWebRequest(req, body) {
 // ─── Server ──────────────────────────────────────────────────────────────────
 const store = makeFileStore();
 
-const { ADMIN_PASSWORD, SUB_TOKEN, VLESS_NODES, PORT = "3000" } = process.env;
+const {
+	ADMIN_PASSWORD,
+	SUB_TOKEN,
+	UPLOAD_TOKEN,
+	VLESS_NODES,
+	PORT = "3000",
+} = process.env;
 
 if (!ADMIN_PASSWORD) {
 	console.error(
@@ -114,6 +120,7 @@ if (!ADMIN_PASSWORD) {
 const env = {
 	ADMIN_PASSWORD,
 	SUB_TOKEN: SUB_TOKEN || "",
+	UPLOAD_TOKEN: UPLOAD_TOKEN || "",
 	VLESS_NODES: VLESS_NODES || "",
 	store,
 };

@@ -52,6 +52,7 @@ export default {
 		const normalizedEnv = {
 			ADMIN_PASSWORD: env.ADMIN_PASSWORD,
 			SUB_TOKEN: env.SUB_TOKEN || "",
+			UPLOAD_TOKEN: env.UPLOAD_TOKEN || "",
 			VLESS_NODES: env.VLESS_NODES || "",
 			store: makeKVStore(env.VLESS_KV),
 		};

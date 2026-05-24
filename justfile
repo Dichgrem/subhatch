@@ -46,7 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-logout
+test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-upload-node test-upload-token test-logout
 
 # GET /api/ping — health check
 test-ping:
@@ -120,6 +120,21 @@ test-audit-clear:
 		-H "Content-Type: application/json" \
 		-d '{"password":"{{PW}}"}' | jq -r .token)
 	curl -s -X DELETE {{BASE}}/api/audit-log -H "Authorization: Bearer $TOKEN" | jq
+
+# POST /api/upload — push node URIs (needs UPLOAD_TOKEN=upload123 on server)
+test-upload-node:
+	#!/usr/bin/env bash
+	curl -s -X POST "{{BASE}}/api/upload?token=upload123" \
+		-H "Content-Type: application/json" \
+		-d '{"nodes":["vless://test-upload@9.9.9.9:443#UploadTest"]}' | jq
+
+# GET /api/upload-token — view upload token
+test-upload-token:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/upload-token -H "Authorization: Bearer $TOKEN" | jq
 
 # PUT /api/sub-token — rotate token
 test-rotate-token:

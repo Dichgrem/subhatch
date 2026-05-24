@@ -19,6 +19,7 @@ const KV_SESSION_PFX = "session:";
 const KV_BRUTE_PFX = "brute:";
 const KV_SUB_TOKEN_KEY = "sub:token";
 const KV_TOKENS_KEY = "sub:tokens";
+const KV_UPLOAD_TOKEN_KEY = "upload:token";
 const KV_AUDIT_KEY = "audit:log";
 const AUDIT_MAX = 500;
 
@@ -199,6 +200,15 @@ async function setSubToken(store, token) {
 	await store.set(KV_SUB_TOKEN_KEY, token);
 }
 
+async function getUploadToken(store, envToken) {
+	const raw = await store.get(KV_UPLOAD_TOKEN_KEY);
+	return raw || envToken || "";
+}
+
+async function setUploadToken(store, token) {
+	await store.set(KV_UPLOAD_TOKEN_KEY, token);
+}
+
 async function getTokens(store) {
 	const raw = await store.get(KV_TOKENS_KEY);
 	if (!raw) return {};
@@ -323,6 +333,88 @@ async function handleSaveNodes(req, env) {
 		`${valid.length} nodes`,
 	);
 	return jsonResp({ ok: true, saved: valid.length });
+}
+
+/** POST /api/upload — submit node URIs with upload token
+ *  Auth: ?token=<upload_token> query param only (no session).
+ *  Deduplicates exact URIs and renames duplicate fragment names. */
+async function handleUpload(req, env) {
+	const url = new URL(req.url);
+	const t = url.searchParams.get("token") || "";
+	const uploadToken = await getUploadToken(env.store, env.UPLOAD_TOKEN);
+	if (!uploadToken) return jsonResp({ error: "Upload not enabled" }, 403);
+	if (t !== uploadToken) return jsonResp({ error: "Unauthorized" }, 401);
+
+	let body;
+	try {
+		body = await req.json();
+	} catch {
+		return jsonResp({ error: "Invalid JSON" }, 400);
+	}
+	const incoming = (body && Array.isArray(body.nodes) ? body.nodes : []).filter(
+		(n) => typeof n === "string" && isValidNode(n.trim()),
+	);
+	if (incoming.length === 0)
+		return jsonResp({ error: "nodes must be a non-empty array" }, 400);
+
+	const envNodes = parseEnvNodes(env.VLESS_NODES);
+	const stored = await getNodes(env.store);
+	const existing = new Set([...envNodes, ...stored].filter(Boolean));
+
+	// Collect all existing fragment names for dedup
+	const nameCount = new Map();
+	for (const node of existing) {
+		const hash = node.lastIndexOf("#");
+		const name = hash !== -1 ? decodeURIComponent(node.slice(hash + 1)) : "";
+		if (name) nameCount.set(name, (nameCount.get(name) || 0) + 1);
+	}
+
+	const fresh = [];
+	const dupes = [];
+	for (const raw of incoming) {
+		const n = raw.trim();
+		if (existing.has(n) || fresh.includes(n)) {
+			dupes.push(n.slice(0, 50));
+			continue;
+		}
+
+		const hash = n.lastIndexOf("#");
+		if (hash !== -1) {
+			let name;
+			try {
+				name = decodeURIComponent(n.slice(hash + 1));
+			} catch {
+				name = n.slice(hash + 1);
+			}
+			if (name) {
+				const count = (nameCount.get(name) || 0) + 1;
+				nameCount.set(name, count);
+				if (count > 1) {
+					// Append suffix: #Tokyo → #Tokyo-2
+					const suffix = `-${count}`;
+					const base = n.slice(0, hash + 1);
+					existing.add(base + encodeURIComponent(name + suffix));
+					fresh.push(base + encodeURIComponent(name + suffix));
+					continue;
+				}
+			}
+		}
+		existing.add(n);
+		fresh.push(n);
+	}
+
+	if (fresh.length === 0)
+		return jsonResp({ ok: true, added: 0, dupes: dupes.length });
+
+	const merged = [...stored.filter(isValidNode), ...fresh];
+	await saveNodes(env.store, merged);
+	await appendAudit(
+		env.store,
+		"upload",
+		clientIP(req),
+		`added ${fresh.length}, dupes ${dupes.length}`,
+	);
+	return jsonResp({ ok: true, added: fresh.length, dupes: dupes.length });
 }
 
 /** PUT /api/sub-token — rotate subscription token */
@@ -550,6 +642,28 @@ async function handleDeleteToken(req, env) {
 	await saveTokens(env.store, tokens);
 	await appendAudit(env.store, "token-delete", clientIP(req), t.slice(0, 8));
 	return jsonResp({ ok: true });
+}
+
+/** GET /api/upload-token — return the upload token (session auth) */
+async function handleGetUploadToken(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+	const t = await getUploadToken(env.store, env.UPLOAD_TOKEN);
+	return jsonResp({ token: t });
+}
+
+/** PUT /api/upload-token — rotate the upload token (session auth) */
+async function handleRotateUploadToken(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token))) {
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+	const newToken = randomToken(16);
+	await setUploadToken(env.store, newToken);
+	await appendAudit(env.store, "token-rotate", clientIP(req), "upload");
+	return jsonResp({ token: newToken });
 }
 
 /** GET /api/ping */
@@ -812,6 +926,12 @@ export async function handleRequest(req, env) {
 		return handleRotateToken(req, env);
 	if (path === "/api/sub-tokens" && method === "DELETE")
 		return handleDeleteToken(req, env);
+	if (path === "/api/upload" && method === "POST")
+		return handleUpload(req, env);
+	if (path === "/api/upload-token" && method === "GET")
+		return handleGetUploadToken(req, env);
+	if (path === "/api/upload-token" && method === "PUT")
+		return handleRotateUploadToken(req, env);
 	if (path === "/api/audit-log" && method === "GET")
 		return handleGetAuditLog(req, env);
 	if (path === "/api/audit-log" && method === "DELETE")

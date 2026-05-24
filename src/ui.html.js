@@ -274,6 +274,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #kernel-url-text{position:relative}
 .hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #upload-url-text{position:relative}
+.hide-sensitive #upload-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 
 /* ── token manager ── */
 .token-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -345,6 +347,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
+        <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
@@ -394,6 +397,18 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
         </div>
         <div class="field-hint">Point sing-box at this URL — returns full config.json for Linux desktop / HPC.</div>
+      </div>
+      <div id="upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">Node Upload</div>
+        <div class="sub-url-wrap">
+          <code id="upload-url-text" style="font-size:11px">—</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadUrl()" title="Copy URL">⎘</button>
+        </div>
+        <div class="field-hint">
+          <code>POST</code> this URL with <code>{"nodes":["vless://..."]}</code> to push nodes.<br>
+          Requires <code>UPLOAD_TOKEN</code> env var — absent → 403 disabled.
+        </div>
       </div>
     </div>
 
@@ -983,6 +998,42 @@ function setKernelUrl() {
   document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
 }
 
+// ── Upload URL ──
+let uploadUrl = '';
+
+async function loadUploadUrl() {
+  if (!subUrl) return;
+  const { ok, data } = await api('GET', '/api/upload-token');
+  if (!ok || !data.token) {
+    uploadUrl = '';
+    document.getElementById('upload-url-text').textContent = '— (UPLOAD_TOKEN not set)';
+    return;
+  }
+  const origin = new URL(subUrl).origin;
+  uploadUrl = origin + '/api/upload?token=' + encodeURIComponent(data.token);
+  document.getElementById('upload-url-text').textContent = uploadUrl;
+}
+
+async function copyUploadUrl() {
+  if (!uploadUrl) return;
+  try {
+    await navigator.clipboard.writeText(uploadUrl);
+    toast('Upload URL copied', 'ok');
+  } catch {
+    prompt('Copy this URL:', uploadUrl);
+  }
+}
+
+async function rotateUploadToken() {
+  if (!subUrl || !confirm('Rotate upload token?')) return;
+  const { ok, data } = await api('PUT', '/api/upload-token');
+  if (!ok) { toast('Failed to rotate', 'err'); return; }
+  const origin = new URL(subUrl).origin;
+  uploadUrl = origin + '/api/upload?token=' + encodeURIComponent(data.token);
+  document.getElementById('upload-url-text').textContent = uploadUrl;
+  toast('Upload token rotated', 'ok');
+}
+
 // ── QR Code ──
 async function loadQrLib() {
   if (window.QRCode) return;
@@ -1048,6 +1099,15 @@ function toggleLog() {
   el.style.display = show ? '' : 'none';
   btn.textContent = show ? 'Log ✓' : 'Log';
   if (show) loadAuditLog();
+}
+
+function toggleUpload() {
+  const el = document.getElementById('upload-section');
+  const btn = document.getElementById('upload-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.textContent = show ? 'Upload ✓' : 'Upload';
+  if (show) loadUploadUrl();
 }
 
 // ── Version check ──

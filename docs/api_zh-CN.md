@@ -30,6 +30,8 @@
 | DELETE | `/api/sub-tokens`        | 删除分 Token              |
 | GET    | `/api/audit-log`         | 列出审计日志（最多 500 条） |
 | DELETE | `/api/audit-log`         | 清空审计日志
+| GET    | `/api/upload-token`      | 查看当前上传 Token         |
+| PUT    | `/api/upload-token`      | 轮换上传 Token
 
 ## 分 Token（Scoped Tokens）
 
@@ -82,6 +84,22 @@
 DELETE /api/sub-tokens?token=<48位十六进制>
 → { "ok": true }
 ```
+
+## 上传接口（Token 认证）
+
+`POST /api/upload` 将节点 URI 推入存储。使用独立 Token（`UPLOAD_TOKEN` 环境变量），与会话/订阅 Token 无关。
+
+**认证：** `?token=<upload_token>` 查询参数。未配置 `UPLOAD_TOKEN` 时返回 `403 Upload not enabled`。
+
+**请求：** `{ "nodes": ["vless://...", "vmess://..."] }`
+
+**返回：** `{ "ok": true, "added": 5, "dupes": 2 }`
+
+**行为：**
+- 仅接受合法 scheme 的 URI（与 `isValidNode` 一致）
+- 精确重复（已在存储中）跳过并计入 `dupes`
+- 同 `#名称` 节点的名称追加 `-2`/`-3` 后缀
+- 上传操作记入审计日志，标记为 `upload`
 
 ## GET /sub — 订阅接口
 

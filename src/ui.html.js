@@ -346,8 +346,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <span class="user-dot"></span>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
-        <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
+        <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
@@ -429,8 +429,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-label" style="margin-bottom:0">Nodes</div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-ghost btn-sm" onclick="showBulkModal()">Bulk Import</button>
           <span id="save-status"></span>
+          <button class="btn btn-ghost btn-sm" onclick="showBulkModal()">Bulk Import</button>
           <button class="btn btn-ghost btn-sm" onclick="exportSingBox()">Export JSON</button>
         </div>
       </div>

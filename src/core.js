@@ -342,8 +342,18 @@ async function handleUpload(req, env) {
 	const url = new URL(req.url);
 	const t = url.searchParams.get("token") || "";
 	const uploadToken = await getUploadToken(env.store, env.UPLOAD_TOKEN);
+	const ip = clientIP(req);
 	if (!uploadToken) return jsonResp({ error: "Upload not enabled" }, 403);
-	if (t !== uploadToken) return jsonResp({ error: "Unauthorized" }, 401);
+	if (t !== uploadToken) {
+		const brute = await checkBrute(env.store, ip);
+		if (brute.blocked) {
+			await appendAudit(env.store, "blocked", ip, "upload");
+			return jsonResp({ error: "Too many requests" }, 429);
+		}
+		await recordBrute(env.store, ip);
+		return jsonResp({ error: "Unauthorized" }, 401);
+	}
+	await clearBrute(env.store, ip);
 
 	let body;
 	try {
@@ -697,9 +707,9 @@ async function handleExportSingBox(req, env) {
 	});
 }
 
-/** GET /api/export/momo — export complete config.json for OpenWrt-momo
- *  Auth: session token (Bearer header) or sub-token (?token= query param) */
-async function handleExportMomo(req, env) {
+/** Resolve auth for export endpoints — session or sub-token.
+ *  Returns { selected, queryToken } on success, or a Response on failure. */
+async function resolveExportAuth(req, env, logAction) {
 	const url = new URL(req.url);
 	const queryToken = url.searchParams.get("token") || "";
 
@@ -709,12 +719,10 @@ async function handleExportMomo(req, env) {
 
 	let selected;
 
-	// 1) Session auth (UI download)
 	const sessionToken = getSessionToken(req);
 	if (await validateSession(env.store, sessionToken)) {
 		selected = all;
 	} else if (queryToken) {
-		// 2) Sub-token auth (momo curl)
 		const primary = await getSubToken(env.store, env.SUB_TOKEN);
 		const scoped = await getTokens(env.store);
 
@@ -726,18 +734,30 @@ async function handleExportMomo(req, env) {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
 			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "export-momo");
-				return jsonResp({ error: "Too many requests" }, 429);
+				await appendAudit(env.store, "blocked", ip, logAction);
+				return { _err: jsonResp({ error: "Too many requests" }, 429) };
 			}
 			await recordBrute(env.store, ip);
-			return jsonResp({ error: "Unauthorized" }, 401);
+			return { _err: jsonResp({ error: "Unauthorized" }, 401) };
 		}
 	} else {
-		return jsonResp({ error: "Unauthorized" }, 401);
+		return { _err: jsonResp({ error: "Unauthorized" }, 401) };
 	}
 
 	if (queryToken) await clearBrute(env.store, clientIP(req));
+	return { selected, queryToken };
+}
 
+/** GET /api/export/momo — export complete config.json for OpenWrt-momo */
+async function handleExportMomo(req, env) {
+	const { selected, queryToken, _err } = await resolveExportAuth(
+		req,
+		env,
+		"export-momo",
+	);
+	if (_err) return _err;
+
+	const url = new URL(req.url);
 	const options = {};
 	for (const key of [
 		"preset",
@@ -777,42 +797,14 @@ async function handleExportMomo(req, env) {
 /** GET /api/export/kernel — export complete config.json for sing-box HPC client
  *  Auth: session token (Bearer header) or sub-token (?token= query param) */
 async function handleExportKernel(req, env) {
+	const { selected, queryToken, _err } = await resolveExportAuth(
+		req,
+		env,
+		"export-kernel",
+	);
+	if (_err) return _err;
+
 	const url = new URL(req.url);
-	const queryToken = url.searchParams.get("token") || "";
-
-	const envNodes = parseEnvNodes(env.VLESS_NODES);
-	const stored = await getNodes(env.store);
-	const all = [...envNodes, ...stored].filter(Boolean);
-
-	let selected;
-
-	const sessionToken = getSessionToken(req);
-	if (await validateSession(env.store, sessionToken)) {
-		selected = all;
-	} else if (queryToken) {
-		const primary = await getSubToken(env.store, env.SUB_TOKEN);
-		const scoped = await getTokens(env.store);
-
-		if (primary && queryToken === primary) {
-			selected = all;
-		} else if (scoped[queryToken]) {
-			selected = all.filter((n) => scoped[queryToken].nodes.includes(n));
-		} else {
-			const ip = clientIP(req);
-			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "export-kernel");
-				return jsonResp({ error: "Too many requests" }, 429);
-			}
-			await recordBrute(env.store, ip);
-			return jsonResp({ error: "Unauthorized" }, 401);
-		}
-	} else {
-		return jsonResp({ error: "Unauthorized" }, 401);
-	}
-
-	if (queryToken) await clearBrute(env.store, clientIP(req));
-
 	const options = {};
 	for (const key of [
 		"preset",

@@ -58,6 +58,7 @@ The **primary** token (set via `SUB_TOKEN` env var, `sub:token` KV key, or rotat
 - Exact duplicates (already in store) are skipped and counted as `dupes`
 - Nodes with the same `#fragment` name get a `-2` / `-3` suffix appended
 - Uploads are recorded in the audit log as `upload`
+- Invalid tokens are rate-limited (shares the global 10/15min counter)
 
 Scoped tokens allow sharing specific nodes with different people. Each scoped token has:
 - `name` — optional display name
@@ -125,8 +126,9 @@ DELETE /api/sub-tokens?token=<48-char-hex>
 - `POST /api/login`: 10 wrong attempts / 15 min per IP
 - `GET /sub`: invalid tokens count toward the same 10-attempt / 15 min per IP limit
 - `GET /api/export/momo`, `GET /api/export/kernel`: invalid `?token=` also shares the same counter
+- `POST /api/upload`: invalid `?token=` shares the same counter; valid upload clears it
 - After 10 failures, returns `429 Too many requests`
-- Only a successful login clears the counter
+- Only login or valid upload/export access clears the counter
 - All rate-limits share the same global counter per IP
 
 ## GET /api/export/sing-box

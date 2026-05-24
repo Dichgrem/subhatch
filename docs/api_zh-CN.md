@@ -100,6 +100,7 @@ DELETE /api/sub-tokens?token=<48位十六进制>
 - 精确重复（已在存储中）跳过并计入 `dupes`
 - 同 `#名称` 节点的名称追加 `-2`/`-3` 后缀
 - 上传操作记入审计日志，标记为 `upload`
+- 无效 Token 受频率限制（共享全局 10次/15分钟 计数器）
 
 ## GET /sub — 订阅接口
 
@@ -117,8 +118,9 @@ DELETE /api/sub-tokens?token=<48位十六进制>
 - `POST /api/login`：每 IP 15 分钟内最多 10 次错误尝试
 - `GET /sub`：无效 Token 计入同一限制
 - `GET /api/export/momo`、`GET /api/export/kernel`：无效 `?token=` 同样共享计数器
+- `POST /api/upload`：无效 `?token=` 共享计数器；有效上传清除计数
 - 超过限制返回 `429 Too many requests`
-- 仅登录成功清除计数器
+- 登录或有效上传/导出访问清除计数器
 - 所有频率限制共享同一计数器（按 IP）
 
 ## GET /api/export/sing-box

@@ -42,9 +42,9 @@ body::after{
   content:'';
   position:fixed;inset:0;
   background-image:
-    linear-gradient(rgba(139,127,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(139,127,255,.03) 1px,transparent 1px);
-  background-size:40px 40px;
+    linear-gradient(rgba(139,127,255,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(139,127,255,.06) 1px,transparent 1px);
+  background-size:30px 30px;
   pointer-events:none;
   z-index:0;
 }
@@ -144,6 +144,7 @@ textarea{
   color:var(--muted);
 }
 .btn-ghost:hover{border-color:var(--accent);color:var(--text)}
+.btn-toggled{border-color:var(--accent);color:var(--accent)}
 .btn-sm{padding:7px 14px;font-size:.72rem}
 .btn-icon{padding:7px 10px}
 .btn[disabled]{opacity:.4;pointer-events:none}
@@ -218,7 +219,7 @@ textarea{
 .stats{
   display:flex;gap:16px;
   font-size:.7rem;color:var(--muted);
-  padding:10px 0 2px;
+  padding:0;
 }
 .stats strong{color:var(--text)}
 
@@ -256,7 +257,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 }
 
 /* ── top bar ── */
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.topbar{display:flex;align-items:center;margin-bottom:24px}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .user-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}
 
@@ -276,6 +277,10 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upload-url-text{position:relative}
 .hide-sensitive #upload-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #upstream-list{position:relative}
+.hide-sensitive #upstream-list::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px;z-index:1}
+.hide-sensitive #audit-list{position:relative}
+.hide-sensitive #audit-list::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px;z-index:1}
 
 /* ── token manager ── */
 .token-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
@@ -311,8 +316,21 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 <body>
 <div class="wrap">
   <header>
-    <h1>Sub Manager <span style="font-size:.55rem;color:var(--muted);font-weight:400;letter-spacing:0" id="ver-tag"></span></h1>
-    <p>VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h1 style="margin-bottom:2px">Sub Manager <span style="font-size:.55rem;color:var(--muted);font-weight:400;letter-spacing:0" id="ver-tag"></span></h1>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto;align-items:baseline">
+      <p style="margin:0">VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
+      <div style="display:flex;align-items:center;gap:12px;font-size:.75rem">
+        <span class="user-dot"></span>
+        <div class="stats" id="stats-bar">
+          <span>Nodes: <strong id="stat-total">0</strong></span>
+          <span>Env: <strong id="stat-env">0</strong></span>
+          <span>Stored: <strong id="stat-stored">0</strong></span>
+        </div>
+      </div>
+    </div>
   </header>
 
   <!-- ── Login ── -->
@@ -337,25 +355,21 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <a href="https://github.com/Dichgrem/subhatch/releases/latest" target="_blank">Download &rarr;</a>
     </div>
     <div class="topbar">
-      <div class="stats" id="stats-bar">
-        <span>Nodes: <strong id="stat-total">0</strong></span>
-        <span>Env: <strong id="stat-env">0</strong></span>
-        <span>Stored: <strong id="stat-stored">0</strong></span>
-      </div>
       <div class="topbar-right">
-        <span class="user-dot"></span>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="sub-card-btn" onclick="toggleCard('sub-card',this)">Sub</button>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="token-card-btn" onclick="toggleCard('token-card',this)">Tokens</button>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
         <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
         <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
-        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
       </div>
     </div>
 
     <!-- Sub URL -->
-    <div class="card">
+    <div class="card" id="sub-card">
       <div class="card-label">Subscription URL</div>
       <div class="sub-url-wrap">
         <code id="sub-url-text">Loading…</code>
@@ -428,7 +442,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
 
     <!-- Token Manager -->
-    <div class="card">
+    <div class="card" id="token-card">
       <div class="card-label">Access Tokens</div>
       <div class="field-hint" style="margin-bottom:6px">
         Create multiple tokens — each with its own node set. Share different nodes with different people.
@@ -440,7 +454,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
     </div>
 
     <!-- Node manager -->
-    <div class="card">
+    <div class="card" id="node-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="card-label" style="margin-bottom:0">Nodes</div>
         <div style="display:flex;gap:8px;align-items:center">
@@ -530,7 +544,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
-const VERSION = "4.6.0";
+const VERSION = "5.0.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -1084,11 +1098,18 @@ async function showTokenQR(token) {
   await showQR(\`\${origin}/sub?token=\${encodeURIComponent(token)}\`);
 }
 
+// ── Card toggles ──
+function toggleCard(id, btn) {
+  const el = document.getElementById(id);
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.classList.toggle('btn-toggled', show);
+}
+
 // ── Hide sensitive ──
 function toggleHide() {
-  const btn = document.getElementById('hide-btn');
   document.body.classList.toggle('hide-sensitive');
-  btn.textContent = document.body.classList.contains('hide-sensitive') ? 'Show' : 'Hide';
+  document.getElementById('hide-btn').classList.toggle('btn-toggled', document.body.classList.contains('hide-sensitive'));
 }
 
 function toggleMomo() {
@@ -1096,7 +1117,8 @@ function toggleMomo() {
   const btn = document.getElementById('momo-btn');
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
-  btn.textContent = show ? 'Momo ✓' : 'Momo';
+  btn.classList.toggle('btn-toggled', show);
+  if (show) setMomoUrl();
 }
 
 function toggleKernel() {
@@ -1104,7 +1126,8 @@ function toggleKernel() {
   const btn = document.getElementById('kernel-btn');
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
-  btn.textContent = show ? 'Kernel ✓' : 'Kernel';
+  btn.classList.toggle('btn-toggled', show);
+  if (show) setKernelUrl();
 }
 
 function toggleLog() {
@@ -1112,7 +1135,7 @@ function toggleLog() {
   const btn = document.getElementById('log-btn');
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
-  btn.textContent = show ? 'Log ✓' : 'Log';
+  btn.classList.toggle('btn-toggled', show);
   if (show) loadAuditLog();
 }
 
@@ -1121,7 +1144,7 @@ function toggleUpload() {
   const btn = document.getElementById('upload-btn');
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
-  btn.textContent = show ? 'Upload ✓' : 'Upload';
+  btn.classList.toggle('btn-toggled', show);
   if (show) loadUploadUrl();
 }
 
@@ -1131,7 +1154,7 @@ function toggleUpstream() {
   const btn = document.getElementById('upstream-btn');
   const show = el.style.display === 'none';
   el.style.display = show ? '' : 'none';
-  btn.textContent = show ? 'Upstream ✓' : 'Upstream';
+  btn.classList.toggle('btn-toggled', show);
   if (show) loadUpstream();
 }
 
@@ -1160,7 +1183,7 @@ function renderUpstream(urls) {
         <div style="font-size:.62rem;color:var(--muted);margin-top:2px">\${age} · \${status}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="syncUpstream(\${i})">Sync</button>
-      <button class="btn btn-ghost btn-sm" onclick="deleteUpstream(\${i})" style="color:var(--red)">✕</button>
+      <button class="del-btn" onclick="deleteUpstream(\${i})" title="Remove">✕</button>
     </div>\`;
   }).join('');
 }

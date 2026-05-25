@@ -168,6 +168,11 @@ textarea{
 .save-status.ok{opacity:1;color:var(--green)}
 .save-status.err{opacity:1;color:var(--red)}
 
+/* ── audit level colors ── */
+.audit-ERROR{color:var(--red)}
+.audit-WARN{color:var(--amber)}
+.audit-INFO{color:var(--muted)}
+
 /* ── sub URL display ── */
 .sub-url-wrap{
   display:flex;align-items:center;gap:10px;
@@ -1285,8 +1290,10 @@ async function loadAuditLog() {
   }
   list.innerHTML = log.map(e => {
     const ts = fmtTime(e.ts);
+    const lv = e.level || 'INFO';
     return \`<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);align-items:baseline">
       <span style="color:var(--muted);min-width:110px;font-variant-numeric:tabular-nums">\${ts}</span>
+      <span class="audit-\${lv}" style="min-width:40px;font-size:.65rem">\${lv}</span>
       <span style="color:var(--amber);min-width:80px">\${e.action}</span>
       <span style="font-family:monospace">\${e.ip}</span>
       \${e.detail ? \`<span style="color:var(--muted)">\${escHtml(e.detail)}</span>\` : ''}

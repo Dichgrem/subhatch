@@ -84,10 +84,10 @@ function clientIP(req) {
 }
 
 // ── Audit log ──
-async function appendAudit(store, action, ip, detail = "") {
+async function appendAudit(store, action, ip, detail = "", level = "INFO") {
 	const raw = await store.get(KV_AUDIT_KEY);
 	const entries = raw ? JSON.parse(raw) : [];
-	entries.unshift({ ts: Date.now(), action, ip, detail });
+	entries.unshift({ ts: Date.now(), action, ip, detail, level });
 	if (entries.length > AUDIT_MAX) entries.length = AUDIT_MAX;
 	await store.set(KV_AUDIT_KEY, JSON.stringify(entries));
 }
@@ -273,7 +273,7 @@ async function handleLogin(req, env) {
 	const ip = clientIP(req);
 	const brute = await checkBrute(env.store, ip);
 	if (brute.blocked) {
-		await appendAudit(env.store, "blocked", ip, "login");
+		await appendAudit(env.store, "blocked", ip, "login", "WARN");
 		return jsonResp(
 			{ error: "Too many attempts. Try again in 15 minutes." },
 			429,
@@ -298,7 +298,7 @@ async function handleLogin(req, env) {
 
 	if (inputHash !== ADMIN_HASH) {
 		await recordBrute(env.store, ip);
-		await appendAudit(env.store, "login-failed", ip);
+		await appendAudit(env.store, "login-failed", ip, "", "WARN");
 		return jsonResp({ error: "Incorrect password" }, 401);
 	}
 
@@ -379,7 +379,7 @@ async function handleUpload(req, env) {
 	if (t !== uploadToken) {
 		const brute = await checkBrute(env.store, ip);
 		if (brute.blocked) {
-			await appendAudit(env.store, "blocked", ip, "upload");
+			await appendAudit(env.store, "blocked", ip, "upload", "WARN");
 			return jsonResp({ error: "Too many requests" }, 429);
 		}
 		await recordBrute(env.store, ip);
@@ -494,7 +494,7 @@ async function handleSub(req, env) {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
 			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "sub");
+				await appendAudit(env.store, "blocked", ip, "sub", "WARN");
 				return textResp("Too many requests", 429);
 			}
 			await recordBrute(env.store, ip);
@@ -512,7 +512,7 @@ async function handleSub(req, env) {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
 			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "sub");
+				await appendAudit(env.store, "blocked", ip, "sub", "WARN");
 				return textResp("Too many requests", 429);
 			}
 			await recordBrute(env.store, ip);
@@ -846,6 +846,7 @@ async function handleSyncUpstream(req, env) {
 		"upstream-sync",
 		clientIP(req),
 		`all:${results.length}`,
+		results.some((r) => !r.ok) ? "ERROR" : "INFO",
 	);
 	return jsonResp({ results });
 }
@@ -891,8 +892,8 @@ async function resolveExportAuth(req, env, logAction) {
 
 	// Sync upstream by default; ?refresh=0 disables
 	const shouldRefresh = url.searchParams.get("refresh") !== "0";
-	if (shouldRefresh && upstreamNodes.length > 0) {
-		const urls = await getUpstreamUrls(env.store);
+	const urls = await getUpstreamUrls(env.store);
+	if (shouldRefresh && urls.length > 0) {
 		const results = [];
 		for (const u of urls) {
 			const r = await syncOneUpstream(u, env.store);
@@ -908,7 +909,13 @@ async function resolveExportAuth(req, env, logAction) {
 			failed > 0
 				? `${total} nodes, ${failed}/${results.length} sources failed`
 				: `${total} nodes`;
-		await appendAudit(env.store, "upstream-sync", clientIP(req), detail);
+		await appendAudit(
+			env.store,
+			"upstream-sync",
+			clientIP(req),
+			detail,
+			failed > 0 ? "ERROR" : "INFO",
+		);
 	}
 
 	let selected;
@@ -928,7 +935,7 @@ async function resolveExportAuth(req, env, logAction) {
 			const ip = clientIP(req);
 			const brute = await checkBrute(env.store, ip);
 			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, logAction);
+				await appendAudit(env.store, "blocked", ip, logAction, "WARN");
 				return { _err: jsonResp({ error: "Too many requests" }, 429) };
 			}
 			await recordBrute(env.store, ip);

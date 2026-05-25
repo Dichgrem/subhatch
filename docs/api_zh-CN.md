@@ -306,6 +306,7 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
     {
       "ts": 1700000000000,
       "action": "login",
+      "level": "INFO",
       "ip": "1.2.3.4",
       "detail": ""
     }
@@ -315,24 +316,25 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 
 ### 记录的操作
 
-| 操作 | 详情 | 触发时机 |
-|------|------|----------|
-| `login` | — | 登录成功 |
-| `login-failed` | — | 密码错误 |
-| `blocked` | 端点名 | 触发频率限制 (429) |
-| `logout` | — | 登出 |
-| `sub` | `N nodes` | 订阅被访问 |
-| `nodes-save` | `N nodes` | 通过 UI 更新节点 |
-| `token-create` | Token 名称 | 创建分 Token |
-| `token-update` | Token 前缀 | 修改分 Token |
-| `token-rotate` | Token 名称/前缀 | 轮换 Token |
-| `token-delete` | Token 前缀 | 删除分 Token |
-| `export-momo` | `N nodes` | 导出 Momo 配置 |
-| `export-kernel` | `N nodes` | 导出 Kernel 配置 |
-| `export-json` | `N outbounds` | 导出 sing-box JSON |
-| `upstream-add` | 名称/URL | 添加上游来源 |
-| `upstream-sync` | `ok:N` / `err:...` | 上游同步完成（默认在导出时执行，`?refresh=0` 跳过） |
-| `upstream-delete` | 名称/URL | 删除上游来源 |
+| 操作 | 级别 | 详情 | 触发时机 |
+|------|------|------|----------|
+| `login` | INFO | — | 登录成功 |
+| `login-failed` | WARN | — | 密码错误 |
+| `blocked` | WARN | 端点名 | 触发频率限制 (429) |
+| `logout` | INFO | — | 登出 |
+| `sub` | INFO | `N nodes` | 订阅被访问 |
+| `nodes-save` | INFO | `N nodes` | 通过 UI 更新节点 |
+| `token-create` | INFO | Token 名称 | 创建分 Token |
+| `token-update` | INFO | Token 前缀 | 修改分 Token |
+| `token-rotate` | INFO | Token 名称/前缀 | 轮换 Token |
+| `token-delete` | INFO | Token 前缀 | 删除分 Token |
+| `export-momo` | INFO | `N nodes` | 导出 Momo 配置 |
+| `export-kernel` | INFO | `N nodes` | 导出 Kernel 配置 |
+| `export-json` | INFO | `N outbounds` | 导出 sing-box JSON |
+| `upload` | INFO | added/dupes | 通过 API 上传节点 |
+| `upstream-add` | INFO | 名称/URL | 添加上游来源 |
+| `upstream-sync` | INFO / ERROR | `N nodes` | 上游同步完成（有来源失败时为 ERROR） |
+| `upstream-delete` | INFO | 名称/URL | 删除上游来源 |
 
 ### DELETE /api/audit-log
 

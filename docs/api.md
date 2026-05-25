@@ -327,6 +327,7 @@ Returns recent audit entries (newest first, max 500).
     {
       "ts": 1700000000000,
       "action": "login",
+      "level": "INFO",
       "ip": "1.2.3.4",
       "detail": ""
     }
@@ -336,24 +337,25 @@ Returns recent audit entries (newest first, max 500).
 
 ### Recorded actions
 
-| Action | Detail | Trigger |
-|--------|--------|---------|
-| `login` | — | Successful admin login |
-| `login-failed` | — | Wrong password |
-| `blocked` | endpoint name | Rate-limited (429) |
-| `logout` | — | Session logout |
-| `sub` | `N nodes` | Subscription accessed |
-| `nodes-save` | `N nodes` | Nodes updated via UI |
-| `token-create` | token name | Scoped token created |
-| `token-update` | token prefix | Scoped token modified |
-| `token-rotate` | token name / prefix | Token rotated |
-| `token-delete` | token prefix | Scoped token deleted |
-| `export-momo` | `N nodes` | Momo config exported |
-| `export-kernel` | `N nodes` | Kernel config exported |
-| `export-json` | `N outbounds` | Sing-box JSON exported |
-| `upstream-add` | name/URL | Upstream source added |
-| `upstream-sync` | `ok:N` / `err:...` | Upstream sync completed (runs by default on export, skip with `?refresh=0`) |
-| `upstream-delete` | name/URL | Upstream source deleted |
+| Action | Level | Detail | Trigger |
+|--------|-------|--------|---------|
+| `login` | INFO | — | Successful admin login |
+| `login-failed` | WARN | — | Wrong password |
+| `blocked` | WARN | endpoint name | Rate-limited (429) |
+| `logout` | INFO | — | Session logout |
+| `sub` | INFO | `N nodes` | Subscription accessed |
+| `nodes-save` | INFO | `N nodes` | Nodes updated via UI |
+| `token-create` | INFO | token name | Scoped token created |
+| `token-update` | INFO | token prefix | Scoped token modified |
+| `token-rotate` | INFO | token name / prefix | Token rotated |
+| `token-delete` | INFO | token prefix | Scoped token deleted |
+| `export-momo` | INFO | `N nodes` | Momo config exported |
+| `export-kernel` | INFO | `N nodes` | Kernel config exported |
+| `export-json` | INFO | `N outbounds` | Sing-box JSON exported |
+| `upload` | INFO | added/dupes | Node uploaded via API |
+| `upstream-add` | INFO | name/URL | Upstream source added |
+| `upstream-sync` | INFO / ERROR | `N nodes` | Upstream sync completed (ERROR if any source failed) |
+| `upstream-delete` | INFO | name/URL | Upstream source deleted |
 
 ### DELETE /api/audit-log
 

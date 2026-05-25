@@ -85,7 +85,8 @@ docker run -d -p 3000:3000 -v subhatch-data:/data \
 ## 文档
 
 | 文档 | EN | 中文 |
-|---|---|---|
+|---|---|---|---|
+| 使用指南 | [usage.md](docs/usage.md) | [usage_zh-CN.md](docs/usage_zh-CN.md) |
 | 部署指南 | [deploy.md](docs/deploy.md) | [deploy_zh-CN.md](docs/deploy_zh-CN.md) |
 | API 参考 | [api.md](docs/api.md) | [api_zh-CN.md](docs/api_zh-CN.md) |
 | 开发指南 | [dev-guide.md](docs/dev-guide.md) | [dev-guide_zh-CN.md](docs/dev-guide_zh-CN.md) |

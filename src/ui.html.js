@@ -144,7 +144,7 @@ textarea{
   color:var(--muted);
 }
 .btn-ghost:hover{border-color:var(--accent);color:var(--text)}
-.btn-toggled{border-color:var(--accent);color:var(--accent)}
+.btn-toggled,.btn-toggled:hover{border-color:var(--accent);color:var(--accent)}
 .btn-sm{padding:7px 14px;font-size:.72rem}
 .btn-icon{padding:7px 10px}
 .btn[disabled]{opacity:.4;pointer-events:none}

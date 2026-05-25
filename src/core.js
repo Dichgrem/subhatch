@@ -22,6 +22,8 @@ const KV_TOKENS_KEY = "sub:tokens";
 const KV_UPLOAD_TOKEN_KEY = "upload:token";
 const KV_AUDIT_KEY = "audit:log";
 const AUDIT_MAX = 500;
+const KV_UPSTREAM_KEY = "upstream:urls";
+const KV_UPSTREAM_PFX = "upstream:nodes:";
 
 // ─────────────────────────────────────────────
 //  Helpers
@@ -207,6 +209,36 @@ async function getUploadToken(store, envToken) {
 
 async function setUploadToken(store, token) {
 	await store.set(KV_UPLOAD_TOKEN_KEY, token);
+}
+
+// ── Upstream helpers ──
+async function getUpstreamUrls(store) {
+	const raw = await store.get(KV_UPSTREAM_KEY);
+	return raw ? JSON.parse(raw) : [];
+}
+
+async function saveUpstreamUrls(store, entries) {
+	await store.set(KV_UPSTREAM_KEY, JSON.stringify(entries));
+}
+
+async function getUpstreamNodes(store, hash) {
+	const raw = await store.get(KV_UPSTREAM_PFX + hash);
+	return raw ? JSON.parse(raw) : [];
+}
+
+async function saveUpstreamNodes(store, hash, nodes) {
+	await store.set(KV_UPSTREAM_PFX + hash, JSON.stringify(nodes));
+}
+
+async function loadAllUpstreamNodes(store) {
+	const urls = await getUpstreamUrls(store);
+	const all = [];
+	for (const u of urls) {
+		if (!u.hash) continue;
+		const nodes = await getUpstreamNodes(store, u.hash);
+		all.push(...nodes);
+	}
+	return all;
 }
 
 async function getTokens(store) {
@@ -676,6 +708,148 @@ async function handleRotateUploadToken(req, env) {
 	return jsonResp({ token: newToken });
 }
 
+// ── Upstream handlers ──
+
+async function syncOneUpstream(u, store) {
+	try {
+		const r = await fetch(u.url);
+		if (!r.ok) throw new Error(`HTTP ${r.status}`);
+		let raw = await r.text();
+		raw = raw.trim();
+		if (!raw) throw new Error("empty response");
+
+		// Try base64 decode
+		let lines;
+		try {
+			const dec = atob(raw.replace(/\s/g, ""));
+			if (VALID_SCHEMES.some((s) => dec.includes(s))) {
+				lines = dec.split(/[\n\r|]/);
+			} else {
+				lines = raw.split(/[\n\r|]/);
+			}
+		} catch {
+			lines = raw.split(/[\n\r|]/);
+		}
+
+		const nodes = lines
+			.map((l) => l.trim())
+			.filter((l) => VALID_SCHEMES.some((s) => l.startsWith(s)));
+		if (nodes.length === 0) throw new Error("no valid nodes");
+		await saveUpstreamNodes(store, u.hash, nodes);
+		u.lastSync = Date.now();
+		u.lastError = null;
+		u.nodeCount = nodes.length;
+		return { ok: true, count: nodes.length };
+	} catch (e) {
+		u.lastError = e.message;
+		return { ok: false, error: e.message };
+	}
+}
+
+async function handleGetUpstream(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token)))
+		return jsonResp({ error: "Unauthorized" }, 401);
+	const urls = await getUpstreamUrls(env.store);
+	return jsonResp({ urls });
+}
+
+async function handleAddUpstream(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token)))
+		return jsonResp({ error: "Unauthorized" }, 401);
+	let body;
+	try {
+		body = await req.json();
+	} catch {
+		return jsonResp({ error: "Invalid JSON" }, 400);
+	}
+	const url = (body.url || "").trim();
+	const name = (body.name || "").trim();
+	if (!url) return jsonResp({ error: "url required" }, 400);
+	const hash = (await sha256(url)).slice(0, 16);
+	const urls = await getUpstreamUrls(env.store);
+	if (urls.some((u) => u.hash === hash))
+		return jsonResp({ error: "Duplicate URL" }, 409);
+
+	const entry = { name, url, hash, lastSync: 0, lastError: null, nodeCount: 0 };
+	await syncOneUpstream(entry, env.store);
+	urls.push(entry);
+	await saveUpstreamUrls(env.store, urls);
+	await appendAudit(env.store, "upstream-add", clientIP(req), name || url);
+	return jsonResp({ entry, ok: true });
+}
+
+async function handleDeleteUpstream(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token)))
+		return jsonResp({ error: "Unauthorized" }, 401);
+	const idx = parseInt(
+		req.url
+			.split("?")[1]
+			?.split("&")
+			.find((p) => p.startsWith("id="))
+			?.split("=")[1],
+		10,
+	);
+	if (!Number.isFinite(idx))
+		return jsonResp({ error: "id query param required" }, 400);
+	const urls = await getUpstreamUrls(env.store);
+	if (idx < 0 || idx >= urls.length)
+		return jsonResp({ error: "Invalid index" }, 400);
+	const removed = urls.splice(idx, 1)[0];
+	if (removed.hash) await saveUpstreamNodes(env.store, removed.hash, []);
+	await saveUpstreamUrls(env.store, urls);
+	await appendAudit(
+		env.store,
+		"upstream-delete",
+		clientIP(req),
+		removed.name || removed.url,
+	);
+	return jsonResp({ ok: true });
+}
+
+async function handleSyncUpstream(req, env) {
+	const token = getSessionToken(req);
+	if (!(await validateSession(env.store, token)))
+		return jsonResp({ error: "Unauthorized" }, 401);
+	const idx = parseInt(
+		req.url
+			.split("?")[1]
+			?.split("&")
+			.find((p) => p.startsWith("id="))
+			?.split("=")[1],
+		10,
+	);
+	const urls = await getUpstreamUrls(env.store);
+	if (Number.isFinite(idx)) {
+		if (idx < 0 || idx >= urls.length)
+			return jsonResp({ error: "Invalid index" }, 400);
+		const r = await syncOneUpstream(urls[idx], env.store);
+		await saveUpstreamUrls(env.store, urls);
+		await appendAudit(
+			env.store,
+			"upstream-sync",
+			clientIP(req),
+			r.ok ? `ok:${r.count}` : `err:${r.error}`,
+		);
+		return jsonResp(r);
+	}
+	const results = [];
+	for (const u of urls) {
+		const r = await syncOneUpstream(u, env.store);
+		results.push({ name: u.name, ...r });
+	}
+	await saveUpstreamUrls(env.store, urls);
+	await appendAudit(
+		env.store,
+		"upstream-sync",
+		clientIP(req),
+		`all:${results.length}`,
+	);
+	return jsonResp({ results });
+}
+
 /** GET /api/export/sing-box — export all nodes as sing-box JSON */
 async function handleExportSingBox(req, env) {
 	const token = getSessionToken(req);
@@ -703,26 +877,39 @@ async function handleExportSingBox(req, env) {
 }
 
 /** Resolve auth for export endpoints — session or sub-token.
- *  Returns { selected, queryToken } on success, or a Response on failure. */
+ *  Returns { selected, queryToken } on success, or a Response on failure.
+ *  ?refresh=1 triggers upstream sync before returning. */
 async function resolveExportAuth(req, env, logAction) {
 	const url = new URL(req.url);
 	const queryToken = url.searchParams.get("token") || "";
 
 	const envNodes = parseEnvNodes(env.VLESS_NODES);
 	const stored = await getNodes(env.store);
+	const upstreamNodes = await loadAllUpstreamNodes(env.store);
 	const all = [...envNodes, ...stored].filter(Boolean);
+	const allWithUpstream = [...all, ...upstreamNodes];
+
+	// ?refresh=1 triggers sync
+	if (url.searchParams.get("refresh") === "1") {
+		const urls = await getUpstreamUrls(env.store);
+		for (const u of urls) await syncOneUpstream(u, env.store);
+		await saveUpstreamUrls(env.store, urls);
+		const fresh = await loadAllUpstreamNodes(env.store);
+		allWithUpstream.length = 0;
+		allWithUpstream.push(...all, ...fresh);
+	}
 
 	let selected;
 
 	const sessionToken = getSessionToken(req);
 	if (await validateSession(env.store, sessionToken)) {
-		selected = all;
+		selected = allWithUpstream;
 	} else if (queryToken) {
 		const primary = await getSubToken(env.store, env.SUB_TOKEN);
 		const scoped = await getTokens(env.store);
 
 		if (primary && queryToken === primary) {
-			selected = all;
+			selected = allWithUpstream;
 		} else if (scoped[queryToken]) {
 			selected = all.filter((n) => scoped[queryToken].nodes.includes(n));
 		} else {
@@ -918,6 +1105,14 @@ export async function handleRequest(req, env) {
 		return handleGetUploadToken(req, env);
 	if (path === "/api/upload-token" && method === "PUT")
 		return handleRotateUploadToken(req, env);
+	if (path === "/api/upstream" && method === "GET")
+		return handleGetUpstream(req, env);
+	if (path === "/api/upstream" && method === "POST")
+		return handleAddUpstream(req, env);
+	if (path === "/api/upstream" && method === "DELETE")
+		return handleDeleteUpstream(req, env);
+	if (path === "/api/upstream/sync" && method === "POST")
+		return handleSyncUpstream(req, env);
 	if (path === "/api/audit-log" && method === "GET")
 		return handleGetAuditLog(req, env);
 	if (path === "/api/audit-log" && method === "DELETE")

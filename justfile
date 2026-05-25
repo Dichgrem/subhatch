@@ -46,7 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-upload-node test-upload-token test-logout
+test-all: test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-upload-node test-upload-token test-upstream-add test-upstream-list test-upstream-delete test-logout
 
 # POST /api/login — correct password
 test-login:
@@ -131,6 +131,33 @@ test-upload-token:
 		-H "Content-Type: application/json" \
 		-d '{"password":"{{PW}}"}' | jq -r .token)
 	curl -s {{BASE}}/api/upload-token -H "Authorization: Bearer $TOKEN" | jq
+
+# POST /api/upstream — add external subscription
+test-upstream-add:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s -X POST {{BASE}}/api/upstream \
+		-H "Content-Type: application/json" \
+		-H "Authorization: Bearer $TOKEN" \
+		-d '{"url":"http://localhost:3001/sub?token=nonexist","name":"Test Upstream"}' | jq '{ok, entry: {name: .entry.name, nodeCount: .entry.nodeCount}}'
+
+# GET /api/upstream — list upstream sources
+test-upstream-list:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s {{BASE}}/api/upstream -H "Authorization: Bearer $TOKEN" | jq '{count: (.urls | length)}'
+
+# DELETE /api/upstream — remove upstream source
+test-upstream-delete:
+	#!/usr/bin/env bash
+	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
+		-H "Content-Type: application/json" \
+		-d '{"password":"{{PW}}"}' | jq -r .token)
+	curl -s -X DELETE "{{BASE}}/api/upstream?id=0" -H "Authorization: Bearer $TOKEN" | jq
 
 # PUT /api/sub-token — rotate token
 test-rotate-token:

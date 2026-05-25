@@ -347,6 +347,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
         <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
+        <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
@@ -409,6 +410,20 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
           <code>POST</code> this URL with <code>{"nodes":["vless://..."]}</code> to push nodes.<br>
           Requires <code>UPLOAD_TOKEN</code> env var — absent → 403 disabled.
         </div>
+      </div>
+    </div>
+
+    <!-- Upstream sources -->
+    <div class="card" id="upstream-section" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-label" style="margin-bottom:0">Upstream Sources</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="upstream-sync-all" onclick="syncAllUpstream()">Sync All</button>
+          <button class="btn btn-ghost btn-sm" onclick="showAddUpstream()">+ Add</button>
+        </div>
+      </div>
+      <div id="upstream-list" style="margin-top:12px">
+        <div style="text-align:center;color:var(--muted);padding:20px 0">No upstream sources. Click + Add.</div>
       </div>
     </div>
 
@@ -515,7 +530,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 <script>
 // ── State ──
-const VERSION = "4.5.0";
+const VERSION = "4.6.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -1108,6 +1123,84 @@ function toggleUpload() {
   el.style.display = show ? '' : 'none';
   btn.textContent = show ? 'Upload ✓' : 'Upload';
   if (show) loadUploadUrl();
+}
+
+// ── Upstream sources ──
+function toggleUpstream() {
+  const el = document.getElementById('upstream-section');
+  const btn = document.getElementById('upstream-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.textContent = show ? 'Upstream ✓' : 'Upstream';
+  if (show) loadUpstream();
+}
+
+async function loadUpstream() {
+  const { ok, data } = await api('GET', '/api/upstream');
+  if (!ok) return;
+  renderUpstream(data.urls || []);
+}
+
+function renderUpstream(urls) {
+  const list = document.getElementById('upstream-list');
+  if (urls.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0">No upstream sources. Click + Add.</div>';
+    return;
+  }
+  list.innerHTML = urls.map((u, i) => {
+    const age = u.lastSync ? fmtTime(u.lastSync) : 'never';
+    const status = u.lastError
+      ? \`<span style="color:var(--red)">\${u.lastError}</span>\`
+      : \`<span style="color:var(--green)">\${u.nodeCount || 0} nodes</span>\`;
+    const name = u.name || u.url.split('/').slice(0, 3).join('/');
+    return \`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escHtml(name)}</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">\${escHtml(u.url)}</div>
+        <div style="font-size:.62rem;color:var(--muted);margin-top:2px">\${age} · \${status}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="syncUpstream(\${i})">Sync</button>
+      <button class="btn btn-ghost btn-sm" onclick="deleteUpstream(\${i})" style="color:var(--red)">✕</button>
+    </div>\`;
+  }).join('');
+}
+
+function showAddUpstream() {
+  const url = prompt('Subscription URL:');
+  if (!url) return;
+  const name = prompt('Name (optional):', '') || '';
+  addUpstream(url.trim(), name.trim());
+}
+
+async function addUpstream(url, name) {
+  const { ok, data } = await api('POST', '/api/upstream', { url, name });
+  if (!ok) { toast(data.error || 'Failed', 'err'); return; }
+  toast('Added · ' + (data.entry.nodeCount || 0) + ' nodes', 'ok');
+  loadUpstream();
+}
+
+async function syncUpstream(idx) {
+  const { ok, data } = await api('POST', '/api/upstream/sync?id=' + idx);
+  if (!ok) { toast('Sync failed', 'err'); return; }
+  toast('Synced · ' + (data.count || 0) + ' nodes', 'ok');
+  loadUpstream();
+}
+
+async function syncAllUpstream() {
+  const btn = document.getElementById('upstream-sync-all');
+  btn.classList.add('loading'); btn.disabled = true;
+  await api('POST', '/api/upstream/sync');
+  btn.classList.remove('loading'); btn.disabled = false;
+  toast('Sync done', 'ok');
+  loadUpstream();
+}
+
+async function deleteUpstream(idx) {
+  if (!confirm('Delete this upstream source?')) return;
+  const { ok } = await api('DELETE', '/api/upstream?id=' + idx);
+  if (!ok) { toast('Failed to delete', 'err'); return; }
+  toast('Deleted', 'ok');
+  loadUpstream();
 }
 
 // ── Version check ──

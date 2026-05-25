@@ -31,6 +31,10 @@
 | DELETE | `/api/audit-log`         | 清空审计日志
 | GET    | `/api/upload-token`      | 查看当前上传 Token         |
 | PUT    | `/api/upload-token`      | 轮换上传 Token
+| GET    | `/api/upstream`          | 列出上游订阅来源                     |
+| POST   | `/api/upstream`          | 添加上游订阅来源                     |
+| DELETE | `/api/upstream`          | 删除上游来源（`?id=`）               |
+| POST   | `/api/upstream/sync`     | 同步上游来源                         |
 
 ## 分 Token（Scoped Tokens）
 
@@ -326,6 +330,9 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 | `export-momo` | `N nodes` | 导出 Momo 配置 |
 | `export-kernel` | `N nodes` | 导出 Kernel 配置 |
 | `export-json` | `N outbounds` | 导出 sing-box JSON |
+| `upstream-add` | 名称/URL | 添加上游来源 |
+| `upstream-sync` | `ok:N` / `err:...` | 上游同步完成 |
+| `upstream-delete` | 名称/URL | 删除上游来源 |
 
 ### DELETE /api/audit-log
 
@@ -334,3 +341,61 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 ### 存储
 
 审计日志存储在 `audit:log` KV 键下，为 JSON 数组。最多 500 条，超过时最旧的被移除。无 TTL，记录持久保存直至手动清除或被上限自动淘汰。
+
+---
+
+## 上游订阅
+
+将外部订阅 URL 导入 subhatch，在 momo/kernel 导出中使用。上游节点合并到 `GLOBAL` selector 中（和存储节点一起），但分 Token 不可见（仅主 Token 可用）。
+
+### GET /api/upstream
+
+列出所有上游来源及同步状态。需会话认证。
+
+**返回：**
+```json
+{
+  "urls": [
+    { "name": "机场A", "url": "https://...", "hash": "a1b2", "lastSync": 1700000000000, "lastError": null, "nodeCount": 12 }
+  ]
+}
+```
+
+### POST /api/upstream
+
+添加新上游来源。创建时自动执行一次同步。需会话认证。
+
+**请求：** `{ "url": "https://...", "name": "我的来源" }`（`name` 可选）
+
+**返回：** `{ "ok": true, "entry": { ... } }`
+
+### DELETE /api/upstream
+
+删除上游来源及其缓存的节点。需会话认证。
+
+**查询参数：** `?id=<索引>` — 索引为 urls 数组中的位置
+
+**返回：** `{ "ok": true }`
+
+### POST /api/upstream/sync
+
+拉取并刷新一个或所有上游来源的节点缓存。需会话认证。
+
+**查询参数：** `?id=<索引>` 同步单个，省略同步全部
+
+**返回（单个）：** `{ "ok": true, "count": 12 }`  
+**返回（全部）：** `{ "results": [{ "name": "...", "ok": true, "count": 12 }, ...] }`
+
+**行为：**
+- 拉取 URL，先尝试 base64 解码，失败则按纯文本处理
+- 仅保留合法节点 URI（`vless://`、`vmess://` 等）
+- 每次同步全量替换，非追加
+- 同步失败时保留上次成功的缓存
+
+### 导出时刷新
+
+在 `/api/export/momo` 或 `/api/export/kernel` 后追加 `?refresh=1`，可在返回配置前触发上游同步。适合 momo 路由器自动刷新。
+
+### 存储
+
+来源列表存储在 `upstream:urls` KV 键下。每个来源的节点缓存存储在 `upstream:nodes:<hash>`。

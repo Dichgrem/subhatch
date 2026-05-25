@@ -31,6 +31,10 @@ Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` 
 | DELETE | `/api/audit-log`         | Clear all audit log entries
 | GET    | `/api/upload-token`      | View current upload token          |
 | PUT    | `/api/upload-token`      | Rotate upload token                |
+| GET    | `/api/upstream`          | List upstream subscription sources |
+| POST   | `/api/upstream`          | Add upstream subscription source   |
+| DELETE | `/api/upstream`          | Remove upstream source (`?id=`)    |
+| POST   | `/api/upstream/sync`     | Sync upstream source(s)            |
 
 ## Scoped tokens
 
@@ -347,6 +351,9 @@ Returns recent audit entries (newest first, max 500).
 | `export-momo` | `N nodes` | Momo config exported |
 | `export-kernel` | `N nodes` | Kernel config exported |
 | `export-json` | `N outbounds` | Sing-box JSON exported |
+| `upstream-add` | name/URL | Upstream source added |
+| `upstream-sync` | `ok:N` / `err:...` | Upstream sync completed |
+| `upstream-delete` | name/URL | Upstream source deleted |
 
 ### DELETE /api/audit-log
 
@@ -355,3 +362,61 @@ Clears all audit entries. Session auth required.
 ### Storage
 
 Audit log is stored under the `audit:log` KV key as a JSON array. Entries are capped at 500 — oldest entries are dropped when the limit is exceeded. No TTL — entries persist until manually cleared or evicted by the cap.
+
+---
+
+## Upstream subscriptions
+
+Imports external subscription URLs into subhatch for use in momo/kernel exports. Upstream nodes are merged into the `GLOBAL` selector alongside stored nodes, but are NOT visible to scoped tokens (primary token only).
+
+### GET /api/upstream
+
+List all upstream sources with sync status. Session auth.
+
+**Response:**
+```json
+{
+  "urls": [
+    { "name": "Airport A", "url": "https://...", "hash": "a1b2", "lastSync": 1700000000000, "lastError": null, "nodeCount": 12 }
+  ]
+}
+```
+
+### POST /api/upstream
+
+Add a new upstream source. Performs an initial sync on creation. Session auth.
+
+**Request:** `{ "url": "https://...", "name": "My Source" }` (`name` optional)
+
+**Response:** `{ "ok": true, "entry": { ... } }` (entry contains sync result)
+
+### DELETE /api/upstream
+
+Remove an upstream source and its cached nodes. Session auth.
+
+**Query:** `?id=<index>` — index as returned in the urls array
+
+**Response:** `{ "ok": true }`
+
+### POST /api/upstream/sync
+
+Pull and refresh node cache for one or all upstream sources. Session auth.
+
+**Query:** `?id=<index>` to sync one, or omit to sync all
+
+**Response (single):** `{ "ok": true, "count": 12 }`  
+**Response (all):** `{ "results": [{ "name": "...", "ok": true, "count": 12 }, ...] }`
+
+**Behavior:**
+- Fetches the URL, tries base64 decode first, falls back to plain text
+- Filters to valid node URIs only (`vless://`, `vmess://`, etc.)
+- Full replacement each sync (not append)
+- Failed syncs retain the last-known-good cache
+
+### Refresh on export
+
+Add `?refresh=1` to `/api/export/momo` or `/api/export/kernel` to trigger upstream sync before returning the config. Useful for momo router auto-refresh.
+
+### Storage
+
+Source list stored under `upstream:urls` KV key. Per-source node cache under `upstream:nodes:<hash>`.

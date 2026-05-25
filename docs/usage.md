@@ -77,7 +77,7 @@ Similar to Momo but:
 - TUN inbound with `auto_route`
 - Default port 9191 (vs Momo's 9095)
 
-Both exports accept `?refresh=1` to trigger upstream sync before returning the config.
+Both exports sync upstream sources by default before serving the config. Add `?refresh=0` to skip the sync. Sync results are logged in the audit log as `upstream-sync`.
 
 ---
 
@@ -151,4 +151,6 @@ Click ✕ to remove a source and its cached nodes.
 
 ### Auto-refresh on export
 
-Append `?refresh=1` to `/api/export/momo` or `/api/export/kernel`. The export endpoint will sync upstream sources before serving the config.
+### Skip sync on export
+
+Add `?refresh=0` to `/api/export/momo` or `/api/export/kernel` to skip upstream sync when pulling the config.

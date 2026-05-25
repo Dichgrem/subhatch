@@ -889,14 +889,26 @@ async function resolveExportAuth(req, env, logAction) {
 	const all = [...envNodes, ...stored].filter(Boolean);
 	const allWithUpstream = [...all, ...upstreamNodes];
 
-	// ?refresh=1 triggers sync
-	if (url.searchParams.get("refresh") === "1") {
+	// Sync upstream by default; ?refresh=0 disables
+	const shouldRefresh = url.searchParams.get("refresh") !== "0";
+	if (shouldRefresh && upstreamNodes.length > 0) {
 		const urls = await getUpstreamUrls(env.store);
-		for (const u of urls) await syncOneUpstream(u, env.store);
+		const results = [];
+		for (const u of urls) {
+			const r = await syncOneUpstream(u, env.store);
+			results.push(r);
+		}
 		await saveUpstreamUrls(env.store, urls);
 		const fresh = await loadAllUpstreamNodes(env.store);
 		allWithUpstream.length = 0;
 		allWithUpstream.push(...all, ...fresh);
+		const total = fresh.length;
+		const failed = results.filter((r) => !r.ok).length;
+		const detail =
+			failed > 0
+				? `${total} nodes, ${failed}/${results.length} sources failed`
+				: `${total} nodes`;
+		await appendAudit(env.store, "upstream-sync", clientIP(req), detail);
 	}
 
 	let selected;

@@ -352,7 +352,7 @@ Returns recent audit entries (newest first, max 500).
 | `export-kernel` | `N nodes` | Kernel config exported |
 | `export-json` | `N outbounds` | Sing-box JSON exported |
 | `upstream-add` | name/URL | Upstream source added |
-| `upstream-sync` | `ok:N` / `err:...` | Upstream sync completed |
+| `upstream-sync` | `ok:N` / `err:...` | Upstream sync completed (runs by default on export, skip with `?refresh=0`) |
 | `upstream-delete` | name/URL | Upstream source deleted |
 
 ### DELETE /api/audit-log
@@ -415,7 +415,7 @@ Pull and refresh node cache for one or all upstream sources. Session auth.
 
 ### Refresh on export
 
-Add `?refresh=1` to `/api/export/momo` or `/api/export/kernel` to trigger upstream sync before returning the config. Useful for momo router auto-refresh.
+Upstream sources are synced by default on every `/api/export/momo` or `/api/export/kernel` request. Add `?refresh=0` to skip the sync.
 
 ### Storage
 

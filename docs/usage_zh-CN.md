@@ -79,7 +79,7 @@ GET /api/export/kernel?token=<sub_token>&preset=ipv4only_realip
 - TUN 开启 `auto_route`
 - 默认端口 9191（Momo 为 9095）
 
-两种导出都支持 `?refresh=1`，在返回配置前同步上游来源。
+两种导出默认同步上游来源。加 `?refresh=0` 跳过同步。同步结果记入审计日志，标记为 `upstream-sync`。
 
 ---
 
@@ -153,4 +153,6 @@ Content-Type: application/json
 
 ### 自动刷新
 
-在 Momo / Kernel 导出 URL 后加 `?refresh=1`，客户端拉配置时自动同步上游。
+### 跳过导出同步
+
+加 `?refresh=0` 到 `/api/export/momo` 或 `/api/export/kernel`，拉取配置时跳过上游同步。

@@ -331,7 +331,7 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 | `export-kernel` | `N nodes` | 导出 Kernel 配置 |
 | `export-json` | `N outbounds` | 导出 sing-box JSON |
 | `upstream-add` | 名称/URL | 添加上游来源 |
-| `upstream-sync` | `ok:N` / `err:...` | 上游同步完成 |
+| `upstream-sync` | `ok:N` / `err:...` | 上游同步完成（默认在导出时执行，`?refresh=0` 跳过） |
 | `upstream-delete` | 名称/URL | 删除上游来源 |
 
 ### DELETE /api/audit-log
@@ -394,7 +394,7 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 
 ### 导出时刷新
 
-在 `/api/export/momo` 或 `/api/export/kernel` 后追加 `?refresh=1`，可在返回配置前触发上游同步。适合 momo 路由器自动刷新。
+上游来源默认在每次 `/api/export/momo` 或 `/api/export/kernel` 请求时同步。加 `?refresh=0` 跳过同步。
 
 ### 存储
 

@@ -6,11 +6,10 @@
 |--------|------------|------------|-------------------------------------|
 | GET    | `/`        | —          | Web UI                              |
 | GET    | `/sub`     | token      | Base64 subscription content         |
-| GET    | `/api/ping`| —          | Health check                        |
 
 ## Admin endpoints (session required)
 
-Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` (creates session), `/api/ping` (health check), `/api/export/momo` and `/api/export/kernel` (also accept sub-token via `?token=`).
+Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` (creates session), `/api/export/momo` and `/api/export/kernel` (also accept sub-token via `?token=`).
 
 | Method | Path                | Description                          |
 |--------|---------------------|--------------------------------------|

@@ -46,11 +46,7 @@ PW := "admin"
 SUB := "test"
 
 # run all test recipes
-test-all: test-ping test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-upload-node test-upload-token test-logout
-
-# GET /api/ping — health check
-test-ping:
-	curl -s {{BASE}}/api/ping | jq
+test-all: test-login test-login-wrong test-save-nodes test-get-nodes test-sub-url test-rotate-token test-sub test-list-tokens test-create-token test-rotate-scoped-token test-scoped-sub test-export-sing-box test-export-momo test-export-kernel test-delete-token test-audit-log test-audit-clear test-upload-node test-upload-token test-logout
 
 # POST /api/login — correct password
 test-login:
@@ -242,9 +238,6 @@ test-export-cli:
 test-full:
 	#!/usr/bin/env bash
 	set -e
-	echo "=== Health check ==="
-	curl -s {{BASE}}/api/ping | jq
-	echo ""
 	echo "=== Login ==="
 	TOKEN=$(curl -s -X POST {{BASE}}/api/login \
 		-H "Content-Type: application/json" \

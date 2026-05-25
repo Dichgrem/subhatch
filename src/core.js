@@ -676,11 +676,6 @@ async function handleRotateUploadToken(req, env) {
 	return jsonResp({ token: newToken });
 }
 
-/** GET /api/ping */
-function handlePing() {
-	return jsonResp({ ok: true, ts: Date.now() });
-}
-
 /** GET /api/export/sing-box — export all nodes as sing-box JSON */
 async function handleExportSingBox(req, env) {
 	const token = getSessionToken(req);
@@ -890,7 +885,6 @@ export async function handleRequest(req, env) {
 	}
 
 	if (path === "/sub" && method === "GET") return handleSub(req, env);
-	if (path === "/api/ping" && method === "GET") return handlePing();
 	if (path === "/api/login" && method === "POST") return handleLogin(req, env);
 	if (path === "/api/logout" && method === "POST")
 		return handleLogout(req, env);

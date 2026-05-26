@@ -165,11 +165,11 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 
 	// ── DNS ──
 	const dnsServers = [
-		{ tag: "local", type: "udp", server: "223.5.5.5" },
+		{ tag: "local", type: "udp", server: "119.29.29.29" },
 		{
 			tag: "public",
 			type: "https",
-			server: "dns.alidns.com",
+			server: "doh.pub",
 			domain_resolver: "local",
 		},
 		{

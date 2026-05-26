@@ -26,6 +26,20 @@ export const HTML_PAGE = /* html */ `<!DOCTYPE html>
   --r:10px;
 }
 
+html.light {
+  --bg:#f4f4f8;
+  --s0:#ffffff;
+  --s1:#fafafa;
+  --border:#dcdce4;
+  --text:#2d3436;
+  --muted:#747c84;
+}
+html.light body::after{
+  background-image:
+    linear-gradient(rgba(0,0,0,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px);
+}
+
 body{
   background:var(--bg);
   color:var(--text);
@@ -263,7 +277,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 
 /* ── top bar ── */
 .topbar{display:flex;align-items:center;margin-bottom:24px}
-.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-right{display:flex;align-items:center;gap:8px}
 .user-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}
 
 @media(max-width:480px){
@@ -370,6 +384,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">☀</button>
       </div>
     </div>
 
@@ -561,6 +576,7 @@ const SCHEMES = ['vless://','vmess://','trojan://','ss://','ssr://','hysteria2:/
 
 // ── Boot ──
 ;(async () => {
+  initTheme();
   if (SESSION) {
     const ok = await verifySession();
     if (ok) { showMain(); await loadAll(); return; }
@@ -1307,6 +1323,28 @@ async function clearAuditLog() {
   if (!ok) { toast('Failed to clear', 'err'); return; }
   document.getElementById('audit-list').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0">Cleared.</div>';
   toast('Audit log cleared', 'ok');
+}
+
+// ── Theme toggle ──
+function initTheme() {
+  if (localStorage.getItem('sub_theme') === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('theme-btn').textContent = '☾';
+  }
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('theme-btn');
+  if (html.classList.contains('light')) {
+    html.classList.remove('light');
+    localStorage.setItem('sub_theme', 'dark');
+    btn.textContent = '☀';
+  } else {
+    html.classList.add('light');
+    localStorage.setItem('sub_theme', 'light');
+    btn.textContent = '☾';
+  }
 }
 
 // ── Close modals on bg click ──

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [5.1.0] - 2026-05-28
+
+### Added
+- Light/dark mode toggle with localStorage persistence and CSS variable theming
+- GitHub link button in topbar for quick source access
+
+### Changed
+- Token manager merged into Sub card as default-visible section; stand-alone toggle removed
+- Theme toggle button placed next to Hide in topbar
+- Mobile responsive: topbar buttons wrap and shrink at narrow viewports
+- Protocol text truncates on narrow screens instead of multi-line wrapping
+- Upstream source entries use tighter spacing with URL truncation for narrow layouts
+
+### Fixed
+- Log section and other toggled panels now reset on logout (no longer persist)
+- Upstream source URLs no longer overlap sync/delete buttons on narrow screens
+
 ## [5.0.0] - 2026-05-26
 
 ### Added

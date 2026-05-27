@@ -18,7 +18,7 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTL
 ## Features
 
 - **Multi-platform** — Cloudflare Workers, Node.js / Docker
-- **Web UI** — add, delete, bulk import nodes visually
+- **Web UI** — add, delete, bulk import nodes visually, with light/dark mode
 - **Secure admin** — session tokens, brute-force rate limiting (10 attempts / 15 min)
 - **Token-gated subscription** — subscription URL includes a secret token
 - **Env-var nodes** — inject static nodes without touching the UI

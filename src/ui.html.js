@@ -283,6 +283,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 @media(max-width:480px){
   .add-area{flex-direction:column}
   .stats{flex-wrap:wrap;gap:10px}
+  .topbar-right{flex-wrap:wrap;gap:4px}
+  .topbar-right .btn-sm{padding:5px 10px;font-size:.66rem}
 }
 
 /* ── hide sensitive ── */
@@ -340,7 +342,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto;align-items:baseline">
-      <p style="margin:0">VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
+      <p style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
       <div style="display:flex;align-items:center;gap:12px;font-size:.75rem">
         <span class="user-dot"></span>
         <div class="stats" id="stats-bar">
@@ -376,7 +378,6 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="topbar">
       <div class="topbar-right">
         <button class="btn btn-ghost btn-sm btn-toggled" id="sub-card-btn" onclick="toggleCard('sub-card',this)">Sub</button>
-        <button class="btn btn-ghost btn-sm btn-toggled" id="token-card-btn" onclick="toggleCard('token-card',this)">Tokens</button>
         <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
@@ -384,6 +385,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
+        <a class="btn btn-ghost btn-sm btn-icon" href="https://github.com/Dichgrem/subhatch" target="_blank" rel="noopener" title="GitHub" style="text-decoration:none">GitHub</a>
         <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">☀</button>
       </div>
     </div>
@@ -400,6 +402,16 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div class="field-hint">
         Import this URL into husi / sing-box / NekoBox / Clash Meta etc.<br>
         Token is embedded in the URL — keep it private.
+      </div>
+      <div id="token-section" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">Access Tokens</div>
+        <div class="field-hint" style="margin-bottom:6px">
+          Create multiple tokens — each with its own node set. Share different nodes with different people.
+        </div>
+        <div id="token-list" class="token-list"></div>
+        <div style="margin-top:12px">
+          <button class="btn btn-ghost btn-sm" onclick="createToken()">+ Create Token</button>
+        </div>
       </div>
       <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <div class="card-label" style="font-size:11px;margin-bottom:6px">OpenWrt-momo</div>
@@ -458,18 +470,6 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       </div>
       <div id="upstream-list" style="margin-top:12px">
         <div style="text-align:center;color:var(--muted);padding:20px 0">No upstream sources. Click + Add.</div>
-      </div>
-    </div>
-
-    <!-- Token Manager -->
-    <div class="card" id="token-card">
-      <div class="card-label">Access Tokens</div>
-      <div class="field-hint" style="margin-bottom:6px">
-        Create multiple tokens — each with its own node set. Share different nodes with different people.
-      </div>
-      <div id="token-list" class="token-list"></div>
-      <div style="margin-top:12px">
-        <button class="btn btn-ghost btn-sm" onclick="createToken()">+ Create Token</button>
       </div>
     </div>
 
@@ -650,6 +650,7 @@ async function doLogout() {
   SESSION = null; localStorage.removeItem('sub_session');
   storedNodes = []; envNodes = []; subUrl = '';
   renderNodes();
+  resetPanels();
   show('v-login');
   document.getElementById('pwd-input').focus();
 }
@@ -1127,6 +1128,12 @@ function toggleCard(id, btn) {
   btn.classList.toggle('btn-toggled', show);
 }
 
+function resetPanels() {
+  document.querySelectorAll('#log-section, #upstream-section, #momo-section, #kernel-section, #upload-section').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#log-btn, #upstream-btn, #momo-btn, #kernel-btn, #upload-btn, #hide-btn').forEach(btn => btn.classList.remove('btn-toggled'));
+  document.body.classList.remove('hide-sensitive');
+}
+
 // ── Hide sensitive ──
 function toggleHide() {
   document.body.classList.toggle('hide-sensitive');
@@ -1197,14 +1204,14 @@ function renderUpstream(urls) {
       ? \`<span style="color:var(--red)">\${u.lastError}</span>\`
       : \`<span style="color:var(--green)">\${u.nodeCount || 0} nodes</span>\`;
     const name = u.name || u.url.split('/').slice(0, 3).join('/');
-    return \`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+    return \`<div style="display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0">
         <div style="font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escHtml(name)}</div>
-        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">\${escHtml(u.url)}</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escHtml(u.url)}</div>
         <div style="font-size:.62rem;color:var(--muted);margin-top:2px">\${age} · \${status}</div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="syncUpstream(\${i})">Sync</button>
-      <button class="del-btn" onclick="deleteUpstream(\${i})" title="Remove">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="syncUpstream(\${i})" style="flex-shrink:0">Sync</button>
+      <button class="del-btn" onclick="deleteUpstream(\${i})" title="Remove" style="flex-shrink:0">✕</button>
     </div>\`;
   }).join('');
 }

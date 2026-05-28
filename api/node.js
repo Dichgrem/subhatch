@@ -27,17 +27,27 @@ const DATA_FILE =
 	process.env.DATA_FILE ?? path.join(process.cwd(), "data.json");
 
 let _db = null;
+let _readLock = null;
 let _writeLock = null;
 
 async function loadDB() {
 	if (_db) return _db;
+	if (_readLock) return _readLock;
+	_readLock = (async () => {
+		if (_db) return _db;
+		try {
+			const raw = await fs.readFile(DATA_FILE, "utf8");
+			_db = JSON.parse(raw);
+		} catch {
+			_db = {};
+		}
+		return _db;
+	})();
 	try {
-		const raw = await fs.readFile(DATA_FILE, "utf8");
-		_db = JSON.parse(raw);
-	} catch {
-		_db = {};
+		return await _readLock;
+	} finally {
+		_readLock = null;
 	}
-	return _db;
 }
 
 async function saveDB() {
@@ -85,7 +95,8 @@ function makeFileStore() {
 // ─── Node.js Request → Web API Request adapter ───────────────────────────────
 function nodeToWebRequest(req, body) {
 	const host = req.headers.host || "localhost";
-	const url = `http://${host}${req.url}`;
+	const proto = req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+	const url = `${proto}://${host}${req.url}`;
 	const headers = new Headers();
 	for (const [k, v] of Object.entries(req.headers)) {
 		if (typeof v === "string") headers.set(k, v);

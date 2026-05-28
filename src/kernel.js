@@ -4,7 +4,7 @@
  * Drop into /etc/sing-box/config.json or point sing-box run -c at it.
  */
 
-import { exportSingBox } from "./export.js";
+import { exportSingBox, int } from "./export.js";
 
 const PRESETS = {
 	ipv4only_realip: {
@@ -245,10 +245,4 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 			errors: errors.length > 0 ? errors : undefined,
 		},
 	};
-}
-
-function int(val, fallback) {
-	if (val == null) return fallback;
-	const n = parseInt(val, 10);
-	return Number.isFinite(n) ? n : fallback;
 }

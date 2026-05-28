@@ -60,6 +60,17 @@ function randomToken(len = 32) {
 		.join("");
 }
 
+function timingSafeEqual(a, b) {
+	const bufA = new Uint8Array(a.length / 2);
+	const bufB = new Uint8Array(b.length / 2);
+	for (let i = 0; i < a.length; i += 2) {
+		bufA[i / 2] = parseInt(a.slice(i, i + 2), 16);
+		bufB[i / 2] = parseInt(b.slice(i, i + 2), 16);
+	}
+	if (bufA.length !== bufB.length) return false;
+	return crypto.subtle.timingSafeEqual(bufA, bufB);
+}
+
 function toBase64(str) {
 	// Works in both browser and Workers/Node
 	if (typeof btoa !== "undefined")
@@ -86,7 +97,12 @@ function clientIP(req) {
 // ── Audit log ──
 async function appendAudit(store, action, ip, detail = "", level = "INFO") {
 	const raw = await store.get(KV_AUDIT_KEY);
-	const entries = raw ? JSON.parse(raw) : [];
+	let entries;
+	try {
+		entries = raw ? JSON.parse(raw) : [];
+	} catch {
+		entries = [];
+	}
 	entries.unshift({ ts: Date.now(), action, ip, detail, level });
 	if (entries.length > AUDIT_MAX) entries.length = AUDIT_MAX;
 	await store.set(KV_AUDIT_KEY, JSON.stringify(entries));
@@ -296,7 +312,7 @@ async function handleLogin(req, env) {
 		: await sha256(env.ADMIN_PASSWORD);
 	const inputHash = await sha256(password);
 
-	if (inputHash !== ADMIN_HASH) {
+	if (!timingSafeEqual(inputHash, ADMIN_HASH)) {
 		await recordBrute(env.store, ip);
 		await appendAudit(env.store, "login-failed", ip, "", "WARN");
 		return jsonResp({ error: "Incorrect password" }, 401);
@@ -589,7 +605,10 @@ async function handleCreateToken(req, env) {
 		return jsonResp({ error: "Invalid JSON" }, 400);
 	}
 	const name = body?.name || "";
-	const nodes = body && Array.isArray(body.nodes) ? body.nodes : [];
+	const nodes =
+		body && Array.isArray(body.nodes)
+			? body.nodes.filter((n) => typeof n === "string" && isValidNode(n))
+			: [];
 	const newToken = randomToken(24);
 
 	const tokens = await getTokens(env.store);
@@ -619,7 +638,13 @@ async function handleUpdateToken(req, env) {
 	if (!tokens[token]) return jsonResp({ error: "Token not found" }, 404);
 
 	if (name !== undefined) tokens[token].name = name;
-	if (nodes !== undefined) tokens[token].nodes = nodes;
+	if (nodes !== undefined) {
+		if (!Array.isArray(nodes))
+			return jsonResp({ error: "nodes must be an array" }, 400);
+		tokens[token].nodes = nodes.filter(
+			(n) => typeof n === "string" && isValidNode(n),
+		);
+	}
 	await saveTokens(env.store, tokens);
 	await appendAudit(
 		env.store,
@@ -716,6 +741,10 @@ async function handleRotateUploadToken(req, env) {
 
 async function syncOneUpstream(u, store) {
 	try {
+		const syncUrl = new URL(u.url);
+		if (syncUrl.protocol !== "https:" && syncUrl.protocol !== "http:") {
+			throw new Error("disallowed scheme");
+		}
 		const r = await fetch(u.url);
 		if (!r.ok) throw new Error(`HTTP ${r.status}`);
 		let raw = await r.text();
@@ -788,14 +817,7 @@ async function handleDeleteUpstream(req, env) {
 	const token = getSessionToken(req);
 	if (!(await validateSession(env.store, token)))
 		return jsonResp({ error: "Unauthorized" }, 401);
-	const idx = parseInt(
-		req.url
-			.split("?")[1]
-			?.split("&")
-			.find((p) => p.startsWith("id="))
-			?.split("=")[1],
-		10,
-	);
+	const idx = parseInt(new URL(req.url).searchParams.get("id"), 10);
 	if (!Number.isFinite(idx))
 		return jsonResp({ error: "id query param required" }, 400);
 	const urls = await getUpstreamUrls(env.store);
@@ -817,14 +839,7 @@ async function handleSyncUpstream(req, env) {
 	const token = getSessionToken(req);
 	if (!(await validateSession(env.store, token)))
 		return jsonResp({ error: "Unauthorized" }, 401);
-	const idx = parseInt(
-		req.url
-			.split("?")[1]
-			?.split("&")
-			.find((p) => p.startsWith("id="))
-			?.split("=")[1],
-		10,
-	);
+	const idx = parseInt(new URL(req.url).searchParams.get("id"), 10);
 	const urls = await getUpstreamUrls(env.store);
 	if (Number.isFinite(idx)) {
 		if (idx < 0 || idx >= urls.length)

@@ -32,6 +32,7 @@ const ALLOWED_SCHEMES = [
 	"vmess://",
 	"trojan://",
 	"ss://",
+	"ssr://",
 	"hysteria2://",
 	"hy2://",
 	"tuic://",
@@ -432,6 +433,9 @@ export function exportSingBox(nodes) {
 				obj = parseVmess(s);
 			} else if (scheme === "ss") {
 				obj = parseSS(s);
+			} else if (scheme === "ssr") {
+				errors.push(`SSR not supported by sing-box: ${s.slice(0, 50)}`);
+				continue;
 			} else {
 				let u;
 				try {
@@ -484,4 +488,10 @@ export function exportSingBox(nodes) {
 	}
 
 	return { outbounds, errors, skipped };
+}
+
+export function int(val, fallback) {
+	if (val == null) return fallback;
+	const n = parseInt(val, 10);
+	return Number.isFinite(n) ? n : fallback;
 }

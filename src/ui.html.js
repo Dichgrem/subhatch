@@ -186,6 +186,7 @@ textarea{
 .audit-ERROR{color:var(--red)}
 .audit-WARN{color:var(--amber)}
 .audit-INFO{color:var(--muted)}
+.audit-group{margin-left:auto}
 
 /* ── sub URL display ── */
 .sub-url-wrap{
@@ -285,6 +286,13 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
   .stats{flex-wrap:wrap;gap:10px}
   .topbar-right{flex-wrap:wrap;gap:4px}
   .topbar-right .btn-sm{padding:5px 10px;font-size:.66rem}
+  .audit-lv{display:none!important}
+  .audit-ts{min-width:78px!important;font-size:.6rem!important}
+  .audit-act{min-width:58px!important;font-size:.65rem!important}
+  .audit-detail{max-width:120px!important;flex-shrink:1!important}
+  .audit-ip{min-width:96px!important;font-size:.6rem!important}
+  .audit-group{margin-left:0!important;gap:6px!important}
+  .audit-row{gap:6px!important}
 }
 
 /* ── hide sensitive ── */
@@ -560,7 +568,7 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
           <button class="btn btn-ghost btn-sm" onclick="clearAuditLog()" title="Clear">✕ Clear</button>
         </div>
       </div>
-      <div id="audit-list" style="margin-top:12px;max-height:400px;overflow-y:auto;font-size:.7rem;color:var(--text)">
+      <div id="audit-list" style="margin-top:12px;max-height:400px;overflow-x:hidden;overflow-y:auto;font-size:.7rem;color:var(--text);scrollbar-gutter:stable;padding-right:4px">
         <div style="text-align:center;color:var(--muted);padding:20px 0">Loading…</div>
       </div>
     </div>
@@ -1325,12 +1333,14 @@ async function loadAuditLog() {
   list.innerHTML = log.map(e => {
     const ts = fmtTime(e.ts);
     const lv = e.level || 'INFO';
-    return \`<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);align-items:baseline">
-      <span style="color:var(--muted);min-width:110px;font-variant-numeric:tabular-nums">\${ts}</span>
-      <span class="audit-\${lv}" style="min-width:40px;font-size:.65rem">\${lv}</span>
-      <span style="color:var(--amber);min-width:80px">\${e.action}</span>
-      <span style="font-family:monospace">\${e.ip}</span>
-      \${e.detail ? \`<span style="color:var(--muted)">\${escHtml(e.detail)}</span>\` : ''}
+    return \`<div class="audit-row" style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);align-items:baseline">
+      <span class="audit-ts" style="color:var(--muted);min-width:110px;font-variant-numeric:tabular-nums">\${ts}</span>
+      <span class="audit-lv audit-\${lv}" style="min-width:40px;font-size:.65rem">\${lv}</span>
+      <span class="audit-act" style="color:var(--amber);min-width:80px">\${e.action}</span>
+      <span class="audit-group" style="display:flex;gap:10px;align-items:baseline">
+        <span class="audit-detail" style="color:var(--muted);max-width:200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${e.detail || ''}</span>
+        <span class="audit-ip" style="font-family:monospace;min-width:110px;flex-shrink:0">\${e.ip}</span>
+      </span>
     </div>\`;
   }).join('');
 }

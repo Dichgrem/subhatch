@@ -8,3 +8,4 @@ wrangler.toml
 # devenv
 .devenv/
 .direnv/
+DOCKER_HUB_OVERVIEW.md

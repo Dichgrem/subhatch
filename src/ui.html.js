@@ -296,8 +296,10 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #kernel-url-text{position:relative}
 .hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
-.hide-sensitive #upload-url-text{position:relative}
-.hide-sensitive #upload-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #upload-ep-text{position:relative}
+.hide-sensitive #upload-ep-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #upload-token-text{position:relative}
+.hide-sensitive #upload-token-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upstream-list{position:relative}
 .hide-sensitive #upstream-list::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px;z-index:1}
 .hide-sensitive #audit-list{position:relative}
@@ -416,13 +418,18 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
       <div id="upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <div class="card-label" style="font-size:11px;margin-bottom:6px">Node Upload</div>
         <div class="sub-url-wrap">
-          <code id="upload-url-text" style="font-size:11px">—</code>
+          <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">URL</span>
+          <code id="upload-ep-text" style="font-size:11px">—</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadEp()" title="Copy URL">⎘</button>
+        </div>
+        <div class="sub-url-wrap" style="margin-top:6px">
+          <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Token</span>
+          <code id="upload-token-text" style="font-size:11px">—</code>
           <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadUrl()" title="Copy URL">⎘</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadToken()" title="Copy Token">⎘</button>
         </div>
         <div class="field-hint">
-          <code>POST</code> this URL with <code>{"nodes":["vless://..."]}</code> to push nodes.<br>
-          Requires <code>UPLOAD_TOKEN</code> env var — absent → 403 disabled.
+          <code>POST</code> the endpoint with <code>{"nodes":["vless://..."]}</code> and <code>?token=&lt;TOKEN&gt;</code> to push nodes.
         </div>
       </div>
       <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
@@ -1049,38 +1056,43 @@ function setKernelUrl() {
 }
 
 // ── Upload URL ──
-let uploadUrl = '';
+let uploadEp = '';
+let uploadToken = '';
 
 async function loadUploadUrl() {
   if (!subUrl) return;
   const { ok, data } = await api('GET', '/api/upload-token');
   if (!ok || !data.token) {
-    uploadUrl = '';
-    document.getElementById('upload-url-text').textContent = '— (UPLOAD_TOKEN not set)';
+    uploadEp = ''; uploadToken = '';
+    document.getElementById('upload-ep-text').textContent = '—';
+    document.getElementById('upload-token-text').textContent = '—';
     return;
   }
   const origin = new URL(subUrl).origin;
-  uploadUrl = origin + '/api/upload?token=' + encodeURIComponent(data.token);
-  document.getElementById('upload-url-text').textContent = uploadUrl;
+  uploadEp = origin + '/api/upload';
+  uploadToken = data.token;
+  document.getElementById('upload-ep-text').textContent = uploadEp;
+  document.getElementById('upload-token-text').textContent = uploadToken;
 }
 
-async function copyUploadUrl() {
-  if (!uploadUrl) return;
-  try {
-    await navigator.clipboard.writeText(uploadUrl);
-    toast('Upload URL copied', 'ok');
-  } catch {
-    prompt('Copy this URL:', uploadUrl);
-  }
+async function copyUploadEp() {
+  if (!uploadEp) return;
+  try { await navigator.clipboard.writeText(uploadEp); toast('URL copied', 'ok'); }
+  catch { prompt('Copy:', uploadEp); }
+}
+
+async function copyUploadToken() {
+  if (!uploadToken) return;
+  try { await navigator.clipboard.writeText(uploadToken); toast('Token copied', 'ok'); }
+  catch { prompt('Copy:', uploadToken); }
 }
 
 async function rotateUploadToken() {
   if (!subUrl || !confirm('Rotate upload token?')) return;
   const { ok, data } = await api('PUT', '/api/upload-token');
   if (!ok) { toast('Failed to rotate', 'err'); return; }
-  const origin = new URL(subUrl).origin;
-  uploadUrl = origin + '/api/upload?token=' + encodeURIComponent(data.token);
-  document.getElementById('upload-url-text').textContent = uploadUrl;
+  uploadToken = data.token;
+  document.getElementById('upload-token-text').textContent = uploadToken;
   toast('Upload token rotated', 'ok');
 }
 

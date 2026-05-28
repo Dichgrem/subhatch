@@ -692,7 +692,11 @@ async function handleGetUploadToken(req, env) {
 	if (!(await validateSession(env.store, token))) {
 		return jsonResp({ error: "Unauthorized" }, 401);
 	}
-	const t = await getUploadToken(env.store, env.UPLOAD_TOKEN);
+	let t = await getUploadToken(env.store, env.UPLOAD_TOKEN);
+	if (!t) {
+		t = randomToken(16);
+		await setUploadToken(env.store, t);
+	}
 	return jsonResp({ token: t });
 }
 

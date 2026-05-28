@@ -230,6 +230,20 @@ textarea{
   line-height:1;
 }
 .del-btn:hover{color:var(--red);background:rgba(248,113,113,.1)}
+.qr-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:1rem;padding:2px 6px;
+  border-radius:4px;transition:color .15s,background .15s;
+  line-height:1;
+}
+.qr-btn:hover{color:var(--accent);background:rgba(139,127,255,.1)}
+.copy-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:1rem;padding:2px 6px;
+  border-radius:4px;transition:color .15s,background .15s;
+  line-height:1;
+}
+.copy-btn:hover{color:var(--accent);background:rgba(139,127,255,.1)}
 
 /* ── add node area ── */
 .add-area{margin-top:16px;display:flex;gap:8px}
@@ -494,41 +508,23 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <div class="card-label" style="margin-bottom:0">Nodes</div>
         <div style="display:flex;gap:8px;align-items:center">
           <span id="save-status"></span>
-          <button class="btn btn-ghost btn-sm" onclick="showBulkModal()">Bulk Import</button>
           <button class="btn btn-ghost btn-sm" onclick="exportSingBox()">Export JSON</button>
         </div>
       </div>
 
       <!-- Add single node -->
-      <div class="add-area" style="margin-top:16px">
-        <input type="text" id="add-input" placeholder="vless://  vmess://  trojan://  hy2://  ..." 
-               onkeydown="if(event.key==='Enter')addNode()">
-        <button class="btn btn-ghost" onclick="addNode()">+ Add</button>
+      <div class="add-area" style="margin-top:16px;align-items:flex-start">
+        <textarea id="add-input" placeholder="vless://  vmess://  — paste one or more, pipe| or newline separated" style="min-height:44px;resize:none;padding-top:10px;padding-bottom:10px;font-size:.78rem" rows="1"></textarea>
+        <button class="btn btn-ghost" onclick="addNode()" style="flex-shrink:0">+ Add</button>
       </div>
       <div class="err-msg" id="add-err"></div>
 
       <!-- Node list -->
       <div id="node-list"></div>
       <div id="empty-hint" style="text-align:center;color:var(--muted);font-size:.78rem;padding:28px 0;display:none">
-        No nodes yet. Add one above or use Bulk Import.
+        No nodes yet. Paste above — supports multiple nodes and base64.
       </div>
     </div>
-
-  <!-- ── Bulk import modal ── -->
-  <div id="modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">
-    <div class="card" style="width:100%;max-width:640px;margin:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="card-label" style="margin:0">Bulk Import</div>
-        <button class="btn btn-ghost btn-sm" onclick="hideBulkModal()">✕ Close</button>
-      </div>
-      <textarea id="bulk-input" placeholder="Paste nodes here, one per line&#10;vless://...&#10;vmess://...&#10;trojan://...&#10;&#10;Or paste base64-encoded subscription content"></textarea>
-      <div class="field-hint">Supports: vless:// vmess:// trojan:// ss:// hysteria2:// hy2:// tuic:// — one per line, or base64-encoded</div>
-      <div style="margin-top:14px;display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="doBulkImport()">Import</button>
-        <button class="btn btn-ghost" onclick="hideBulkModal()">Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <!-- ── QR modal ── -->
   <div id="qr-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center">
@@ -737,12 +733,16 @@ function renderNodes() {
     row.innerHTML = \`
       <span class="node-scheme">\${schemeLabel}</span>
       <span class="node-name" title="\${escHtml(n)}">\${escHtml(name)}</span>
-      <span class="node-src">\${env ? '⚙ env' : '✎ stored'}</span>
+      <button class="copy-btn" title="Copy">⎘</button>
+      <button class="qr-btn" data-uri="\${escHtml(n)}" title="QR Code">▦</button>
       \${env ? '' : \`<button class="del-btn" onclick="delNode(\${storedNodes.indexOf(n)})" title="Remove">✕</button>\`}
     \`;
+
     list.appendChild(row);
     row.addEventListener("click", (e) => {
       if (e.target.closest(".del-btn")) return;
+      if (e.target.closest(".qr-btn")) { showQR(e.target.closest(".qr-btn").dataset.uri); return; }
+      if (e.target.closest(".copy-btn")) { navigator.clipboard.writeText(n); toast("Copied", "ok"); return; }
       navigator.clipboard.writeText(n);
       toast("Copied to clipboard", "ok");
     });
@@ -792,21 +792,36 @@ function renderTokens() {
 function addNode() {
   const input = document.getElementById('add-input');
   const err = document.getElementById('add-err');
-  const val = input.value.trim();
+  let raw = input.value.trim();
   err.textContent = '';
 
-  if (!val) { err.textContent = 'Enter a node URI'; return; }
-  if (!SCHEMES.some(s => val.startsWith(s))) {
-    err.textContent = 'Unrecognized scheme. Must start with vless://, vmess://, trojan://, etc.';
+  if (!raw) { err.textContent = 'Enter one or more node URIs'; return; }
+
+  try {
+    const decoded = atob(raw.replace(/\\s/g,''));
+    if (SCHEMES.some(s => decoded.includes(s))) raw = decoded;
+  } catch {}
+
+  const lines = raw.split(/[\\n\\r|]/).map(l => l.trim()).filter(Boolean);
+  const valid = lines.filter(l => SCHEMES.some(s => l.startsWith(s)));
+
+  if (valid.length === 0) {
+    err.textContent = 'Unrecognized scheme. Must start with vless://, vmess://, etc.';
     return;
   }
-  if (storedNodes.includes(val) || envNodes.includes(val)) {
-    err.textContent = 'Duplicate node'; return;
-  }
-  storedNodes.push(val);
+
+  const dupes = valid.filter(n => storedNodes.includes(n) || envNodes.includes(n));
+  const fresh = valid.filter(n => !storedNodes.includes(n) && !envNodes.includes(n));
+
+  fresh.forEach(n => storedNodes.push(n));
   input.value = '';
   renderNodes();
   saveNodes();
+
+  const msgs = [];
+  if (fresh.length) msgs.push(\`Imported \${fresh.length} node(s)\`);
+  if (dupes.length) msgs.push(\`skipped \${dupes.length} dupe(s)\`);
+  toast(msgs.join(', '), 'ok');
 }
 
 // ── Delete node ──
@@ -837,38 +852,6 @@ async function saveNodes() {
     s.className = 'save-status err';
     toast('Network error', 'err');
   }
-}
-
-// ── Bulk import ──
-function showBulkModal() {
-  document.getElementById('modal-bg').style.display = 'flex';
-  document.getElementById('bulk-input').focus();
-}
-function hideBulkModal() {
-  document.getElementById('modal-bg').style.display = 'none';
-  document.getElementById('bulk-input').value = '';
-}
-
-function doBulkImport() {
-  let raw = document.getElementById('bulk-input').value.trim();
-  if (!raw) return;
-
-  // Try base64 decode
-  try {
-    const decoded = atob(raw.replace(/\\s/g,''));
-    if (SCHEMES.some(s => decoded.includes(s))) raw = decoded;
-  } catch {}
-
-  const lines = raw.split(/[\\n\\r|]/).map(l => l.trim()).filter(Boolean);
-  const valid = lines.filter(l => SCHEMES.some(s => l.startsWith(s)));
-  const dupes = valid.filter(n => storedNodes.includes(n) || envNodes.includes(n));
-  const fresh = valid.filter(n => !storedNodes.includes(n) && !envNodes.includes(n));
-
-  fresh.forEach(n => storedNodes.push(n));
-  renderNodes();
-  hideBulkModal();
-  saveNodes();
-  toast(\`Imported \${fresh.length} node(s)\${dupes.length ? \`, skipped \${dupes.length} dupes\` : ''}\`, 'ok');
 }
 
 // ── Copy sub URL ──
@@ -1376,9 +1359,6 @@ function toggleTheme() {
 }
 
 // ── Close modals on bg click ──
-document.getElementById('modal-bg').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal-bg')) hideBulkModal();
-});
 document.getElementById('qr-bg').addEventListener('click', e => {
   if (e.target === document.getElementById('qr-bg')) document.getElementById('qr-bg').style.display='none';
 });

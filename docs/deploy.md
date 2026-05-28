@@ -42,7 +42,20 @@ ADMIN_PASSWORD=changeme SUB_TOKEN=mytoken node api/node.js
 # Listens on :3000
 ```
 
-**Docker:**
+**Docker (pre-built image, recommended):**
+```bash
+docker pull brantcoat/subhatch:latest
+
+docker run -d \
+  -p 3000:3000 \
+  -v subhatch-data:/data \
+  -e ADMIN_PASSWORD=your_strong_password \
+  -e SUB_TOKEN=your_random_token \
+  --name subhatch \
+  brantcoat/subhatch:latest
+```
+
+**Docker (build from source):**
 ```bash
 docker build -t subhatch .
 
@@ -59,16 +72,19 @@ docker run -d \
 ```yaml
 services:
   subhatch:
-    build: .
+    image: brantcoat/subhatch:latest
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/data
+      - subhatch-data:/data
     environment:
       - ADMIN_PASSWORD=your_strong_password
       - SUB_TOKEN=your_random_token
       - VLESS_NODES=vless://...#node1|vmess://...#node2
     restart: unless-stopped
+
+volumes:
+  subhatch-data:
 ```
 
 ---

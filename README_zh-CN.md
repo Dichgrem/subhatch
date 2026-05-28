@@ -79,7 +79,16 @@ ADMIN_PASSWORD=changeme SUB_TOKEN=mytoken node api/node.js
 # 监听 :3000 端口
 ```
 
-**Docker：**
+**Docker（推荐，使用预构建镜像）：**
+```bash
+docker pull brantcoat/subhatch:latest
+docker run -d -p 3000:3000 -v subhatch-data:/data \
+  -e ADMIN_PASSWORD=your_strong_password \
+  -e SUB_TOKEN=your_random_token \
+  --name subhatch brantcoat/subhatch:latest
+```
+
+**Docker（自行构建）：**
 ```bash
 docker build -t subhatch .
 docker run -d -p 3000:3000 -v subhatch-data:/data \
@@ -88,7 +97,7 @@ docker run -d -p 3000:3000 -v subhatch-data:/data \
   --name subhatch subhatch
 ```
 
-**Docker Compose：** `docker compose up -d`
+**Docker Compose：** 下载 [`docker-compose.yml`](docker-compose.yml) 然后 `docker compose up -d`
 
 ---
 

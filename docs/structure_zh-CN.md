@@ -3,11 +3,15 @@
 ```
 subhatch/
 ├── src/
-│   ├── core.js           # 平台无关业务逻辑
+│   ├── core.js           # 平台无关业务逻辑（路由 + 认证 + 节点/上传/导出处理）
+│   ├── shared.js         # 常量、加密、认证、存储基础函数
+│   ├── upstream.js       # 外部订阅同步 + CRUD
+│   ├── tokens.js         # 订阅令牌 + 作用域令牌管理
 │   ├── export.js         # Sing-box JSON 出站转换器
 │   ├── kernel.js          # HPC/桌面 sing-box config.json 生成器
 │   ├── momo.js           # OpenWrt-momo config.json 生成器
-│   └── ui.html.js        # Web UI HTML 模板
+│   ├── ui.html.js        # Web UI HTML 模板 + JavaScript
+│   └── css.js            # Web UI 样式表
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers 入口
 │   └── node.js           # Node.js HTTP 服务器

@@ -28,14 +28,16 @@ just run
 
 ## Code Overview
 
-All business logic lives in `src/core.js`:
-- **Constants** — session TTL, brute-force limits, KV key prefixes
-- **Helpers** — JSON/text response builders, SHA-256 hash, random token, base64 encode, IP detection
-- **Session management** — create, validate, destroy sessions (2h TTL)
-- **Brute-force guard** — 10 failures / 15 min window per IP, backed by KV store
-- **Node storage** — get/save node lists from KV
-- **Route handlers** — login, logout, node CRUD, subscription generation
-- **Router** — path/method dispatch + CORS preflight
+Source modules in `src/`:
+- **`shared.js`** — constants, crypto helpers, auth primitives, KV storage adapters (used by all other modules)
+- **`core.js`** — login/logout, node upload, export endpoints, route dispatch
+- **`upstream.js`** — external subscription sync + CRUD handlers
+- **`tokens.js`** — subscription token + scoped token management
+- **`export.js`** — sing-box JSON outbound converter (per-node URL parsing)
+- **`kernel.js`** — HPC/desktop sing-box config.json generator
+- **`momo.js`** — OpenWrt-momo config.json generator
+- **`ui.html.js`** — Web UI HTML template + inline JavaScript
+- **`css.js`** — Web UI stylesheet
 
 Platform adapters live in `api/`:
 - `api/cloudflare.js` — Cloudflare Workers (KV binding)

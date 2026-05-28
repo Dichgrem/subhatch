@@ -7,22 +7,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [5.2.0] - 2026-05-28
 
 ### Added
+- Modular architecture: core.js split into shared.js, upstream.js, tokens.js
+- CSS extracted from ui.html.js into css.js for independent styling
+- Timing-safe password hash comparison (XOR constant-time)
+- X-Forwarded-Proto header validation for reverse proxy deployments
 - Upload token auto-generated on first access (no manual env var needed)
 - Upload section split into URL and token rows with labels for clarity
 - QR code button per node row for individual node scanning
 - Copy button per node row besides QR
-- Bootstrap: responsive audit log — columns shrink, level hidden on mobile
+- Responsive audit log — columns shrink, level hidden on mobile
 
 ### Changed
 - Bulk Import modal removed; addNode() accepts multi-line/base64 input inline
 - Add input changed to textarea supporting newlines for batch paste
 - Node rows no longer show stored/env source labels
 - Upload endpoint now auto-generates token rather than requiring UPLOAD_TOKEN env
+- Scoped token nodes validated through isValidNode filter
+- Upstream URL scheme restricted to http/https (SSRF prevention)
+- Query parsing uses URLSearchParams instead of manual string splitting
+- Node.js adapter: loadDB gains read-lock to prevent concurrent-access races
+- int() helper deduplicated into export.js (shared by kernel.js, momo.js)
 
 ### Fixed
+- Audit log corrupt entries no longer crash the request (try-catch on JSON.parse)
 - Audit log panel not hidden on logout (moved inside v-main view)
 - Upstream source URLs overlapping buttons on narrow screens
 - Log section now properly reset on logout via resetPanels()
+- ssr:// nodes explicitly reported as unsupported by sing-box export
 
 ## [5.1.0] - 2026-05-28
 

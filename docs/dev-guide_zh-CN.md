@@ -28,14 +28,16 @@ just run
 
 ## 代码概述
 
-所有业务逻辑位于 `src/core.js`：
-- **常量** — 会话 TTL、暴破限制、KV 键前缀
-- **工具函数** — JSON/文本响应构建、SHA-256 哈希、随机 Token、Base64 编码、IP 检测
-- **会话管理** — 创建、验证、销毁会话（2 小时 TTL）
-- **暴力破解防护** — 每 IP 每 15 分钟最多 10 次失败
-- **节点存储** — 从 KV 获取/保存节点列表
-- **路由处理** — 登录、登出、节点增删改、订阅生成
-- **路由器** — 路径/方法分发 + CORS 预检
+`src/` 下的模块：
+- **`shared.js`** — 常量、加密工具、认证基础函数、KV 存储适配器（被所有其他模块引用）
+- **`core.js`** — 登录/登出、节点上传、配置导出、路由分发
+- **`upstream.js`** — 外部订阅同步 + CRUD 处理
+- **`tokens.js`** — 订阅令牌 + 作用域令牌管理
+- **`export.js`** — Sing-box JSON 出站转换器（逐节点 URL 解析）
+- **`kernel.js`** — HPC/桌面 sing-box config.json 生成器
+- **`momo.js`** — OpenWrt-momo config.json 生成器
+- **`ui.html.js`** — Web UI HTML 模板 + 内联 JavaScript
+- **`css.js`** — Web UI 样式表
 
 平台适配器位于 `api/`：
 - `api/cloudflare.js` — Cloudflare Workers（KV 绑定）

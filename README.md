@@ -18,13 +18,18 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTL
 ## Features
 
 - **Multi-platform** — Cloudflare Workers, Node.js / Docker
-- **Web UI** — add, delete, bulk import nodes visually, with light/dark mode
+- **Web UI** — login, node CRUD, bulk paste, light/dark mode, mobile responsive
 - **Secure admin** — session tokens, brute-force rate limiting (10 attempts / 15 min)
-- **Token-gated subscription** — subscription URL includes a secret token
-- **Env-var nodes** — inject static nodes without touching the UI
-- **Bulk import** — paste raw URIs or base64-encoded subscription content
-- **QR code** — scan subscription URL directly from the UI
-- **Sing-box export** — download all nodes as sing-box outbound JSON config
+- **Token-gated subscription** — subscription URL with secret token, scoped tokens per node set
+- **Multi-node input** — paste one or many URIs (newline/pipe-separated) or base64 subscription
+- **Node QR & copy** — individual QR code and copy button per node row
+- **Upstream import** — subscribe to external URLs, merge into export
+- **Config export** — sing-box outbound JSON ([desktop](docs/usage_zh-CN.md#sing-box-kernel) and [HPC](docs/usage_zh-CN.md#sing-box-kernel) variants)
+- **Node upload API** — `POST /api/upload` with auto-generated token
+- **Momo export** — OpenWrt-momo full config with 4 presets
+- **Audit log** — color-coded admin operation history with IP
+- **Hidden info mode** — hide sensitive text for screenshots
+- **Version update check** — GitHub release notification in UI
 - **Zero dependencies** — plain ES Modules, no npm install needed
 - **Pre-hashed passwords** — supports SHA-256 hex strings for zero-plaintext deployment
 - **CSRF-safe** — sessions in localStorage as Bearer tokens, not cookies

@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [5.2.0] - 2026-05-28
+
+### Added
+- Upload token auto-generated on first access (no manual env var needed)
+- Upload section split into URL and token rows with labels for clarity
+- QR code button per node row for individual node scanning
+- Copy button per node row besides QR
+- Bootstrap: responsive audit log — columns shrink, level hidden on mobile
+
+### Changed
+- Bulk Import modal removed; addNode() accepts multi-line/base64 input inline
+- Add input changed to textarea supporting newlines for batch paste
+- Node rows no longer show stored/env source labels
+- Upload endpoint now auto-generates token rather than requiring UPLOAD_TOKEN env
+
+### Fixed
+- Audit log panel not hidden on logout (moved inside v-main view)
+- Upstream source URLs overlapping buttons on narrow screens
+- Log section now properly reset on logout via resetPanels()
+
 ## [5.1.0] - 2026-05-28
 
 ### Added

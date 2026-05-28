@@ -64,6 +64,11 @@ wrangler secret put SUB_TOKEN        # 可选，但强烈建议
 
 # 6. 重新部署使密钥生效
 wrangler deploy api/cloudflare.js
+
+# 7.更新部署
+cd subhatch
+git pull
+wrangler deploy api/cloudflare.js
 ```
 
 ### Node.js / Docker

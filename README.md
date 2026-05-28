@@ -64,6 +64,11 @@ wrangler secret put SUB_TOKEN        # optional but recommended
 
 # 6. Redeploy to apply secrets
 wrangler deploy api/cloudflare.js
+
+# 7. Update deploy
+cd subhatch
+git pull
+wrangler deploy api/cloudflare.js
 ```
 
 ### Node.js / Docker

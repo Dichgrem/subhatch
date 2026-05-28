@@ -68,7 +68,9 @@ function timingSafeEqual(a, b) {
 		bufB[i / 2] = parseInt(b.slice(i, i + 2), 16);
 	}
 	if (bufA.length !== bufB.length) return false;
-	return crypto.subtle.timingSafeEqual(bufA, bufB);
+	let diff = 0;
+	for (let i = 0; i < bufA.length; i++) diff |= bufA[i] ^ bufB[i];
+	return diff === 0;
 }
 
 function toBase64(str) {

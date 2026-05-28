@@ -378,11 +378,11 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
     <div class="topbar">
       <div class="topbar-right">
         <button class="btn btn-ghost btn-sm btn-toggled" id="sub-card-btn" onclick="toggleCard('sub-card',this)">Sub</button>
-        <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
+        <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
-        <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
         <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
         <a class="btn btn-ghost btn-sm btn-icon" href="https://github.com/Dichgrem/subhatch" target="_blank" rel="noopener" title="GitHub" style="text-decoration:none">GitHub</a>
@@ -411,6 +411,18 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         <div id="token-list" class="token-list"></div>
         <div style="margin-top:12px">
           <button class="btn btn-ghost btn-sm" onclick="createToken()">+ Create Token</button>
+        </div>
+      </div>
+      <div id="upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">Node Upload</div>
+        <div class="sub-url-wrap">
+          <code id="upload-url-text" style="font-size:11px">—</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadUrl()" title="Copy URL">⎘</button>
+        </div>
+        <div class="field-hint">
+          <code>POST</code> this URL with <code>{"nodes":["vless://..."]}</code> to push nodes.<br>
+          Requires <code>UPLOAD_TOKEN</code> env var — absent → 403 disabled.
         </div>
       </div>
       <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
@@ -444,18 +456,6 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
         </div>
         <div class="field-hint">Point sing-box at this URL — returns full config.json for Linux desktop / HPC.</div>
-      </div>
-      <div id="upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label" style="font-size:11px;margin-bottom:6px">Node Upload</div>
-        <div class="sub-url-wrap">
-          <code id="upload-url-text" style="font-size:11px">—</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadUrl()" title="Copy URL">⎘</button>
-        </div>
-        <div class="field-hint">
-          <code>POST</code> this URL with <code>{"nodes":["vless://..."]}</code> to push nodes.<br>
-          Requires <code>UPLOAD_TOKEN</code> env var — absent → 403 disabled.
-        </div>
       </div>
     </div>
 
@@ -498,7 +498,6 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
         No nodes yet. Add one above or use Bulk Import.
       </div>
     </div>
-  </div>
 
   <!-- ── Bulk import modal ── -->
   <div id="modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px">

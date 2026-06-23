@@ -167,8 +167,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(Number(PORT), () => {
-	console.log(`[subhatch] Listening on http://0.0.0.0:${PORT}`);
+	const addr = server.address();
+	console.log(`[subhatch] Listening on http://0.0.0.0:${addr.port}`);
 	console.log(
-		`[subhatch] Sub URL: http://0.0.0.0:${PORT}/sub${SUB_TOKEN ? `?token=${SUB_TOKEN}` : ""}`,
+		`[subhatch] Sub URL: http://0.0.0.0:${addr.port}/sub${SUB_TOKEN ? `?token=${SUB_TOKEN}` : ""}`,
 	);
 });

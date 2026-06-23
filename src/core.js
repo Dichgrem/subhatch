@@ -470,16 +470,6 @@ export async function handleRequest(req, env) {
 	const method = req.method.toUpperCase();
 	const path = url.pathname.replace(/\/$/, "") || "/";
 
-	if (method === "OPTIONS") {
-		return new Response(null, {
-			headers: {
-				"Access-Control-Allow-Origin": "*",
-				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers": "Content-Type, Authorization",
-			},
-		});
-	}
-
 	if (path === "/sub" && method === "GET") return handleSub(req, env);
 	if (path === "/api/login" && method === "POST") return handleLogin(req, env);
 	if (path === "/api/logout" && method === "POST")

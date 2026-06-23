@@ -224,7 +224,7 @@ ${CSS}
 
 <script>
 // ── State ──
-const VERSION = "5.2.0";
+const VERSION = "5.2.1";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)

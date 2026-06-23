@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [5.2.1] - unreleased
+
+### Fixed
+- **SECURITY** Stored XSS via upstream error messages — upstream.lastError now HTML-escaped in UI
+- **SECURITY** Stored XSS via audit log IP/detail/action fields — all now HTML-escaped; level restricted to whitelist
+- **SECURITY** Weak password hashing — replaced plain SHA-256 with PBKDF2-SHA256 (100k iterations, random salt), auto-upgrade on login
+- **SECURITY** Blind SSRF — upstream sync blocks literal IPs in private/reserved/loopback ranges before fetch
+- Removed permissive `Access-Control-Allow-Origin: *` OPTIONS handler (cross-origin never functional, UI is same-origin)
+
 ## [5.2.0] - 2026-05-28
 
 ### Added

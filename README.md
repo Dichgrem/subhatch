@@ -19,7 +19,7 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTL
 
 - **Multi-platform** — Cloudflare Workers, Node.js / Docker
 - **Web UI** — login, node CRUD, bulk paste, light/dark mode, mobile responsive
-- **Secure admin** — session tokens, brute-force rate limiting (10 attempts / 15 min)
+- **Secure admin** — session tokens, brute-force rate limiting (10 attempts / 15 min), SSRF protection
 - **Token-gated subscription** — subscription URL with secret token, scoped tokens per node set
 - **Multi-node input** — paste one or many URIs (newline/pipe-separated) or base64 subscription
 - **Node QR & copy** — individual QR code and copy button per node row
@@ -31,7 +31,7 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTL
 - **Hidden info mode** — hide sensitive text for screenshots
 - **Version update check** — GitHub release notification in UI
 - **Zero dependencies** — plain ES Modules, no npm install needed
-- **Pre-hashed passwords** — supports SHA-256 hex strings for zero-plaintext deployment
+- **Pre-hashed passwords** — PBKDF2-SHA256 with per-deployment salt, legacy SHA-256 hex fallback
 - **CSRF-safe** — sessions in localStorage as Bearer tokens, not cookies
 
 ---

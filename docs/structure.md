@@ -15,6 +15,11 @@ subhatch/
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers entry
 │   └── node.js           # Node.js HTTP server
+├── test/                 # Automated tests (node:test, zero deps)
+│   ├── lib/              # Test helpers (server lifecycle + API)
+│   ├── unit/             # Unit tests (shared.js, export.js)
+│   ├── api/              # HTTP endpoint tests
+│   └── integration/      # End-to-end flow
 ├── docs/                 # Documentation
 ├── wrangler.toml.example # Cloudflare Workers config template
 ├── Dockerfile

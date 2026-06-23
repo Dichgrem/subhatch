@@ -19,9 +19,10 @@ just run
 
 | 命令 | 说明 |
 |---|---|
+| `just lint` | 用 Biome 格式化 + 代码检查（自动修复） |
 | `just format` | 用 Biome 格式化 JS |
-| `just check` | 格式化 + 代码检查（不写入） |
-| `just fix` | 自动修复格式和 lint |
+| `just test` | 运行全部测试（单元 + API + 集成） |
+| `just test-unit` | 仅运行单元测试（快速，无需服务器） |
 | `just run` | 本地启动 Node.js 适配器（:3000） |
 | `just docker-build` | 构建 Docker 镜像 |
 | `just clean` | 删除 `data.json` |

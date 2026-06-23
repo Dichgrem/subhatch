@@ -15,6 +15,11 @@ subhatch/
 ├── api/
 │   ├── cloudflare.js     # Cloudflare Workers 入口
 │   └── node.js           # Node.js HTTP 服务器
+├── test/                 # 自动化测试（node:test，零依赖）
+│   ├── lib/              # 测试工具（服务器生命周期 + API）
+│   ├── unit/             # 单元测试（shared.js, export.js）
+│   ├── api/              # HTTP 端点测试
+│   └── integration/      # 端到端流程
 ├── docs/                 # 文档
 ├── wrangler.toml.example # Cloudflare Workers 配置模板
 ├── Dockerfile

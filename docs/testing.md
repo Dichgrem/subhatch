@@ -1,54 +1,98 @@
 # Testing
 
-No automated test suite yet. Manual test plan below.
+115 automated tests using Node.js built-in `node:test` + `node:assert`. Zero dependencies.
 
-## Test Plan
+## Quick Start
 
-### Authentication
+```bash
+# Full suite (unit + API + integration)
+just test
+# or: node --test --test-concurrency=1 "test/**/*.test.js"
 
-- [ ] Login with correct password → returns session token
-- [ ] Login with wrong password → returns 401
-- [ ] Login with missing password → returns 400
-- [ ] Brute-force: 10 wrong attempts from same IP → 429 blocked for 15 min
-- [ ] Successful login after block period → works again
-- [ ] Pre-hashed `ADMIN_PASSWORD` (64 hex chars) → login with raw password works
+# Unit tests only (no server needed, fast)
+just test-unit
+# or: node --test "test/unit/*.test.js"
+```
 
-### Session
+## Structure
 
-- [ ] Authenticated requests include `Authorization: Bearer <token>` → accepted
-- [ ] No token → 401 on protected endpoints
-- [ ] Expired token (after 2h) → 401
-- [ ] Logout → token invalidated, 401 on subsequent requests
+```
+test/
+├── lib/
+│   └── helpers.js            # Server lifecycle + API helper
+├── unit/
+│   ├── shared.test.js        # Crypto, IP filters, parsing (43 tests)
+│   └── export.test.js        # Protocol parsers (14 tests)
+├── api/
+│   ├── auth.test.js          # POST /api/login, /api/logout
+│   ├── nodes.test.js         # GET/PUT /api/nodes
+│   ├── sub.test.js           # /sub, scoped tokens CRUD
+│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel
+│   ├── upload.test.js        # POST /api/upload, /api/upload-token
+│   ├── upstream.test.js      # Upstream CRUD + sync + SSRF guard
+│   └── audit.test.js         # Audit log read/clear
+└── integration/
+    └── full.test.js          # 12-step end-to-end flow
+```
 
-### Nodes
+## How it works
 
-- [ ] GET `/api/nodes` → returns env nodes + stored nodes
-- [ ] PUT `/api/nodes` → saves valid nodes, skips invalid
-- [ ] Empty nodes array → returns `saved: 0`
-- [ ] Invalid node URI → filtered out
-- [ ] Env-var nodes (`VLESS_NODES`) → shown as read-only in response
+- Each API/integration test file auto-spawns a Node.js server (`api/node.js`) on a random port with a temporary `data.json` in `/tmp`. The server is killed and the temp file deleted after the test file finishes.
+- `test/lib/helpers.js` provides `startServer()`, `cleanup()`, and `api()` — a thin fetch wrapper that handles session tokens.
+- `--test-concurrency=1` ensures serial execution (each test file gets its own server instance, no port conflicts).
+- Unit tests (`test/unit/`) don't need a server — they import `src/` modules directly and run in a few milliseconds.
 
-### Subscription
+## Writing new tests
 
-- [ ] GET `/sub` without `SUB_TOKEN` → returns base64 nodes
-- [ ] GET `/sub?token=xxx` with correct token → returns base64 nodes
-- [ ] GET `/sub?token=xxx` with wrong token → 401
-- [ ] PUT `/api/sub-token` → generates new token, old token stops working
-- [ ] No nodes → empty response with `Profile-Update-Interval: 24`
+```js
+// Unit test — no server needed
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { myFunction } from "../../src/shared.js";
 
-### UI
+describe("myFunction", () => {
+  it("works", () => {
+    assert.equal(myFunction("input"), "expected");
+  });
+});
 
-- [ ] GET `/` → returns HTML page
-- [ ] Login flow → redirect to main panel
-- [ ] Add node via input → appears in list
-- [ ] Delete stored node → removed from list
-- [ ] Bulk import → nodes added, dupes skipped
-- [ ] Copy subscription URL → copied to clipboard
-- [ ] QR code → renders correctly
-- [ ] Logout → returns to login page
+// API test — server auto-started
+import { describe, it, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { startServer, cleanup, api } from "../lib/helpers.js";
 
-### Platform Adapters
+let baseUrl, token;
 
-- [ ] Cloudflare Workers: deploy and verify all endpoints
-- [ ] Node.js: `just run` and test all endpoints locally
-- [ ] Docker: `docker compose up` and test all endpoints
+before(async () => {
+  ({ baseUrl } = await startServer());
+  const { data } = await api("/api/login", {
+    method: "POST", body: { password: "admin" }, baseUrl,
+  });
+  token = data.token;
+});
+
+after(async () => { await cleanup(); });
+
+describe("GET /api/example", () => {
+  it("requires auth", async () => {
+    const { status } = await api("/api/example", { baseUrl });
+    assert.equal(status, 401);
+  });
+});
+```
+
+## Test coverage
+
+| Area | Tests |
+|---|---|
+| Shared helpers (crypto, IP filters, parsing) | 43 |
+| Protocol parsers (8 protocols) | 14 |
+| Auth (login, logout, session) | 6 |
+| Nodes CRUD | 6 |
+| Subscriptions + scoped tokens | 10 |
+| Export endpoints (3 formats) | 7 |
+| Upload API | 6 |
+| Upstream CRUD + SSRF guard | 7 |
+| Audit log | 4 |
+| End-to-end flow | 12 |
+| **Total** | **115** |

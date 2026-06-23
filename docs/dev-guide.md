@@ -19,9 +19,10 @@ just run
 
 | Command | What it does |
 |---|---|
+| `just lint` | Format + lint JS with Biome (auto-fix) |
 | `just format` | Format JS with Biome |
-| `just check` | Format + lint check (no write) |
-| `just fix` | Auto-fix format + lint |
+| `just test` | Run full test suite (unit + API + integration) |
+| `just test-unit` | Run unit tests only (fast, no server needed) |
 | `just run` | Start Node.js adapter locally on :3000 |
 | `just docker-build` | Build Docker image |
 | `just clean` | Remove `data.json` |

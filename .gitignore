@@ -10,3 +10,5 @@ wrangler.toml
 .direnv/
 DOCKER_HUB_OVERVIEW.md
 problem.md
+reasonix.toml
+.codegraph

@@ -1,54 +1,98 @@
 # 测试
 
-暂无自动化测试套件。以下是手动测试计划。
+115 项自动化测试，使用 Node.js 内置的 `node:test` + `node:assert`。零依赖。
 
-## 测试计划
+## 快速开始
 
-### 认证
+```bash
+# 完整测试（单元 + API + 集成）
+just test
+# 或：node --test --test-concurrency=1 "test/**/*.test.js"
 
-- [ ] 正确密码登录 → 返回会话 Token
-- [ ] 错误密码登录 → 返回 401
-- [ ] 缺少密码登录 → 返回 400
-- [ ] 暴破：同 IP 10 次错误 → 429 封禁 15 分钟
-- [ ] 封禁窗口过后成功登录 → 恢复正常
-- [ ] 预哈希 `ADMIN_PASSWORD`（64 位 hex）→ 原始密码登录成功
+# 仅单元测试（无需服务器，快速）
+just test-unit
+# 或：node --test "test/unit/*.test.js"
+```
 
-### 会话
+## 结构
 
-- [ ] 认证请求带 `Authorization: Bearer <token>` → 通过
-- [ ] 无 Token → 受保护端点返回 401
-- [ ] 过期 Token（2 小时后）→ 401
-- [ ] 登出 → Token 失效，后续请求返回 401
+```
+test/
+├── lib/
+│   └── helpers.js            # 服务器生命周期 + API 封装
+├── unit/
+│   ├── shared.test.js        # 加密、IP 过滤、解析（43 项）
+│   └── export.test.js        # 协议解析器（14 项）
+├── api/
+│   ├── auth.test.js          # POST /api/login, /api/logout
+│   ├── nodes.test.js         # GET/PUT /api/nodes
+│   ├── sub.test.js           # /sub, 作用域令牌 CRUD
+│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel
+│   ├── upload.test.js        # POST /api/upload, /api/upload-token
+│   ├── upstream.test.js      # 上游 CRUD + sync + SSRF 防护
+│   └── audit.test.js         # 审计日志读取/清空
+└── integration/
+    └── full.test.js          # 12 步端到端流程
+```
 
-### 节点
+## 工作原理
 
-- [ ] GET `/api/nodes` → 返回环境变量节点 + 存储节点
-- [ ] PUT `/api/nodes` → 保存有效节点，跳过无效
-- [ ] 空节点数组 → 返回 `saved: 0`
-- [ ] 无效节点 URI → 被过滤
-- [ ] 环境变量节点（`VLESS_NODES`）→ 响应中标记为只读
+- 每个 API/集成测试文件自动启动一个 Node.js 服务器（`api/node.js`），使用随机端口和 `/tmp` 下的临时 `data.json`。测试文件完成后服务器被终止，临时文件被删除。
+- `test/lib/helpers.js` 提供 `startServer()`、`cleanup()` 和 `api()` — 轻量的 fetch 封装，自动处理会话 Token。
+- `--test-concurrency=1` 确保串行执行（每个测试文件有自己的服务器实例，无端口冲突）。
+- 单元测试（`test/unit/`）不需要服务器 — 直接导入 `src/` 模块，毫秒级完成。
 
-### 订阅
+## 编写新测试
 
-- [ ] GET `/sub` 不带 `SUB_TOKEN` → 返回 base64 节点
-- [ ] GET `/sub?token=xxx` 正确 token → 返回 base64 节点
-- [ ] GET `/sub?token=xxx` 错误 token → 401
-- [ ] PUT `/api/sub-token` → 生成新 token，旧 token 失效
-- [ ] 无节点 → 空响应，带 `Profile-Update-Interval: 24`
+```js
+// 单元测试 — 无需服务器
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { myFunction } from "../../src/shared.js";
 
-### 界面
+describe("myFunction", () => {
+  it("正常情况", () => {
+    assert.equal(myFunction("input"), "expected");
+  });
+});
 
-- [ ] GET `/` → 返回 HTML 页面
-- [ ] 登录流程 → 跳转到主面板
-- [ ] 输入框添加节点 → 出现在列表中
-- [ ] 删除存储节点 → 从列表移除
-- [ ] 批量导入 → 节点添加，重复跳过
-- [ ] 复制订阅地址 → 复制到剪贴板
-- [ ] 二维码 → 正确渲染
-- [ ] 登出 → 返回登录页
+// API 测试 — 自动启动服务器
+import { describe, it, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { startServer, cleanup, api } from "../lib/helpers.js";
 
-### 平台适配器
+let baseUrl, token;
 
-- [ ] Cloudflare Workers：部署并验证所有端点
-- [ ] Node.js：`just run` 本地测试所有端点
-- [ ] Docker：`docker compose up` 测试所有端点
+before(async () => {
+  ({ baseUrl } = await startServer());
+  const { data } = await api("/api/login", {
+    method: "POST", body: { password: "admin" }, baseUrl,
+  });
+  token = data.token;
+});
+
+after(async () => { await cleanup(); });
+
+describe("GET /api/example", () => {
+  it("需要认证", async () => {
+    const { status } = await api("/api/example", { baseUrl });
+    assert.equal(status, 401);
+  });
+});
+```
+
+## 测试覆盖
+
+| 区域 | 数量 |
+|---|---|
+| 通用工具（加密、IP 过滤、解析） | 43 |
+| 协议解析器（8 种协议） | 14 |
+| 认证（登录、登出、会话） | 6 |
+| 节点 CRUD | 6 |
+| 订阅 + 作用域令牌 | 10 |
+| 导出端点（3 种格式） | 7 |
+| 上传 API | 6 |
+| 上游 CRUD + SSRF 防护 | 7 |
+| 审计日志 | 4 |
+| 端到端流程 | 12 |
+| **总计** | **115** |

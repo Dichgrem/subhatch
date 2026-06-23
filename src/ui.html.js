@@ -404,7 +404,8 @@ function renderNodes() {
 }
 
 function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Render tokens ──
@@ -853,7 +854,7 @@ function renderUpstream(urls) {
   list.innerHTML = urls.map((u, i) => {
     const age = u.lastSync ? fmtTime(u.lastSync) : 'never';
     const status = u.lastError
-      ? \`<span style="color:var(--red)">\${u.lastError}</span>\`
+      ? \`<span style="color:var(--red)">\${escHtml(u.lastError)}</span>\`
       : \`<span style="color:var(--green)">\${u.nodeCount || 0} nodes</span>\`;
     const name = u.name || u.url.split('/').slice(0, 3).join('/');
     return \`<div style="display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:1px solid var(--border)">
@@ -965,14 +966,15 @@ async function loadAuditLog() {
   }
   list.innerHTML = log.map(e => {
     const ts = fmtTime(e.ts);
-    const lv = e.level || 'INFO';
+    const lv = (e.level || 'INFO');
+    const safeLv = /^(INFO|WARN|ERROR|DEBUG)$/.test(lv) ? lv : 'INFO';
     return \`<div class="audit-row" style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);align-items:baseline">
       <span class="audit-ts" style="color:var(--muted);min-width:110px;font-variant-numeric:tabular-nums">\${ts}</span>
-      <span class="audit-lv audit-\${lv}" style="min-width:40px;font-size:.65rem">\${lv}</span>
-      <span class="audit-act" style="color:var(--amber);min-width:80px">\${e.action}</span>
+      <span class="audit-lv audit-\${safeLv}" style="min-width:40px;font-size:.65rem">\${safeLv}</span>
+      <span class="audit-act" style="color:var(--amber);min-width:80px">\${escHtml(e.action)}</span>
       <span class="audit-group" style="display:flex;gap:10px;align-items:baseline">
-        <span class="audit-detail" style="color:var(--muted);max-width:200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${e.detail || ''}</span>
-        <span class="audit-ip" style="font-family:monospace;min-width:110px;flex-shrink:0">\${e.ip}</span>
+        <span class="audit-detail" style="color:var(--muted);max-width:200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escHtml(e.detail || '')}</span>
+        <span class="audit-ip" style="font-family:monospace;min-width:110px;flex-shrink:0">\${escHtml(e.ip)}</span>
       </span>
     </div>\`;
   }).join('');

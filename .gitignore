@@ -9,3 +9,4 @@ wrangler.toml
 .devenv/
 .direnv/
 DOCKER_HUB_OVERVIEW.md
+problem.md

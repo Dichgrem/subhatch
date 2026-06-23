@@ -17,16 +17,21 @@ import {
 	destroySession,
 	getAuditLog,
 	getNodes,
+	getPasswordConfig,
 	getSessionToken,
 	getSubToken,
 	getUploadToken,
 	isValidNode,
 	jsonResp,
 	normalizePreset,
+	PBKDF2_ITER,
 	parseEnvNodes,
+	pbkdf2Hash,
+	pbkdf2Verify,
 	randomToken,
 	recordBrute,
 	saveNodes,
+	setPasswordConfig,
 	setUploadToken,
 	sha256,
 	timingSafeEqual,
@@ -77,6 +82,19 @@ async function handleLogin(req, env) {
 	const { password } = body || {};
 	if (!password) return jsonResp({ error: "Password required" }, 400);
 
+	// ── PBKDF2 path (preferred) ──
+	const pwCfg = await getPasswordConfig(env.store);
+	if (pwCfg && pwCfg.algo === "pbkdf2") {
+		if (await pbkdf2Verify(password, pwCfg)) {
+			await clearBrute(env.store, ip);
+			await appendAudit(env.store, "login", ip);
+			const token = await createSession(env.store);
+			return jsonResp({ token });
+		}
+		// PBKDF2 failed — fall through to SHA-256 in case ADMIN_PASSWORD was changed
+	}
+
+	// ── SHA-256 path (legacy / fallback) ──
 	const ADMIN_HASH = /^[0-9a-f]{64}$/i.test(env.ADMIN_PASSWORD)
 		? env.ADMIN_PASSWORD
 		: await sha256(env.ADMIN_PASSWORD);
@@ -87,6 +105,16 @@ async function handleLogin(req, env) {
 		await appendAudit(env.store, "login-failed", ip, "", "WARN");
 		return jsonResp({ error: "Incorrect password" }, 401);
 	}
+
+	// ── Auto-upgrade to PBKDF2 on successful legacy login ──
+	const salt = randomToken(16);
+	const upgradedHash = await pbkdf2Hash(password, salt, PBKDF2_ITER);
+	await setPasswordConfig(env.store, {
+		algo: "pbkdf2",
+		hash: upgradedHash,
+		salt,
+		iter: PBKDF2_ITER,
+	});
 
 	await clearBrute(env.store, ip);
 	await appendAudit(env.store, "login", ip);

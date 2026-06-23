@@ -17,6 +17,8 @@ export const KV_AUDIT_KEY = "audit:log";
 export const AUDIT_MAX = 500;
 export const KV_UPSTREAM_KEY = "upstream:urls";
 export const KV_UPSTREAM_PFX = "upstream:nodes:";
+export const KV_PASSWORD_KEY = "admin:pwhash";
+export const PBKDF2_ITER = 100000;
 
 // ── Node validation ──
 export const VALID_SCHEMES = [
@@ -67,6 +69,46 @@ export async function sha256(str) {
 	return Array.from(new Uint8Array(buf))
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
+}
+
+// ── PBKDF2 password hashing ──
+export async function pbkdf2Hash(password, salt, iterations = PBKDF2_ITER) {
+	const enc = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		"raw",
+		enc.encode(password),
+		"PBKDF2",
+		false,
+		["deriveBits"],
+	);
+	const saltBytes = new Uint8Array(salt.length / 2);
+	for (let i = 0; i < salt.length; i += 2)
+		saltBytes[i / 2] = parseInt(salt.slice(i, i + 2), 16);
+	const bits = await crypto.subtle.deriveBits(
+		{ name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations },
+		key,
+		256,
+	);
+	return Array.from(new Uint8Array(bits))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+}
+
+export async function pbkdf2Verify(
+	password,
+	{ hash, salt, iter = PBKDF2_ITER },
+) {
+	const computed = await pbkdf2Hash(password, salt, iter);
+	return timingSafeEqual(computed, hash);
+}
+
+export async function getPasswordConfig(store) {
+	const raw = await store.get(KV_PASSWORD_KEY);
+	return raw ? JSON.parse(raw) : null;
+}
+
+export async function setPasswordConfig(store, config) {
+	await store.set(KV_PASSWORD_KEY, JSON.stringify(config));
 }
 
 export function randomToken(len = 32) {

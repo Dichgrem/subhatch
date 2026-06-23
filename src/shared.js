@@ -154,6 +154,42 @@ export function clientIP(req) {
 	);
 }
 
+// ── SSRF guard ──
+// Matches literal IPs in private / reserved / loopback ranges.
+// Hostnames (not IP literals) pass through — DNS resolution is not
+// available on all platforms (Workers), so they are left to fetch().
+const PRIVATE_IPV4 = [
+	/^0\./, // 0.0.0.0/8
+	/^10\./, // 10.0.0.0/8
+	/^127\./, // 127.0.0.0/8
+	/^169\.254\./, // 169.254.0.0/16
+	/^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
+	/^192\.168\./, // 192.168.0.0/16
+	/^22[4-9]\.|^2[3-9]\d\./, // 224.0.0.0/4 (multicast)
+	/^24\d\.|^25[0-5]\.(?!25[0-5]\.255\.255\b)/, // 240.0.0.0/4 (reserved)
+];
+const PRIVATE_IPV6 = [
+	/^::1$/, // loopback
+	/^fe[89ab]/i, // fe80::/10 link-local
+	/^f[c-d]/i, // fc00::/7 unique local
+];
+
+export function isPrivateHost(hostname) {
+	if (!hostname) return false;
+	const h = hostname.replace(/^\[|\]$/g, ""); // strip brackets from IPv6
+	if (!h) return false;
+
+	// IPv6 detection — after bracket strip, contains ":"
+	if (h.includes(":")) return PRIVATE_IPV6.some((re) => re.test(h));
+
+	// IPv4 detection
+	if (/^\d+\.\d+\.\d+\.\d+$/.test(h))
+		return PRIVATE_IPV4.some((re) => re.test(h));
+
+	// Plain hostname — not an IP literal
+	return false;
+}
+
 // ── Audit log ──
 export async function appendAudit(
 	store,

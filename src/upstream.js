@@ -6,6 +6,7 @@ import {
 	appendAudit,
 	clientIP,
 	getSessionToken,
+	isPrivateHost,
 	jsonResp,
 	KV_UPSTREAM_KEY,
 	KV_UPSTREAM_PFX,
@@ -51,6 +52,8 @@ export async function syncOneUpstream(u, store) {
 		if (syncUrl.protocol !== "https:" && syncUrl.protocol !== "http:") {
 			throw new Error("disallowed scheme");
 		}
+		if (isPrivateHost(syncUrl.hostname))
+			throw new Error("private host not allowed");
 		const r = await fetch(u.url);
 		if (!r.ok) throw new Error(`HTTP ${r.status}`);
 		let raw = await r.text();

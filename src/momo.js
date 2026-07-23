@@ -205,7 +205,6 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 		rules: dnsRules,
 		final: "foreign",
 		strategy: s.dnsStrategy,
-		independent_cache: true,
 		reverse_mapping: useFakeip,
 	};
 

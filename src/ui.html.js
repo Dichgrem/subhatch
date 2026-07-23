@@ -55,6 +55,7 @@ ${CSS}
         <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
         <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
         <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
+        <button class="btn btn-ghost btn-sm" id="windows-btn" onclick="toggleWindows()" title="Show Windows URL">Win</button>
         <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
         <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
         <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
@@ -135,6 +136,22 @@ ${CSS}
           <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
         </div>
         <div class="field-hint">Point sing-box at this URL — returns full config.json for Linux desktop / HPC.</div>
+      </div>
+      <div id="windows-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-label" style="font-size:11px;margin-bottom:6px">sing-box Windows</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <select id="windows-preset" onchange="setWindowsUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
+            <option value="ipv4only_realip">IPv4 + RealIP</option>
+            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
+            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
+            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
+          </select>
+        </div>
+        <div class="sub-url-wrap">
+          <code id="windows-url-text" style="font-size:11px">Loading…</code>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyWindowsUrl()" title="Copy Windows URL">⎘</button>
+        </div>
+        <div class="field-hint">Point sing-box at this URL — returns full config.json for Windows desktop.</div>
       </div>
     </div>
 
@@ -697,6 +714,25 @@ function setKernelUrl() {
   document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
 }
 
+// ── Windows URL ──
+async function copyWindowsUrl() {
+  if (!subUrl) return;
+  const preset = document.getElementById("windows-preset").value;
+  const windowsUrl = subUrl.replace("/sub?", "/api/export/windows?") + "&preset=" + preset;
+  try {
+    await navigator.clipboard.writeText(windowsUrl);
+    toast("Windows URL copied", "ok");
+  } catch {
+    prompt("Copy this URL:", windowsUrl);
+  }
+}
+
+function setWindowsUrl() {
+  if (!subUrl) { document.getElementById("windows-url-text").textContent = "—"; return; }
+  const preset = document.getElementById("windows-preset").value;
+  document.getElementById("windows-url-text").textContent = subUrl.replace("/sub?", "/api/export/windows?") + "&preset=" + preset;
+}
+
 // ── Upload URL ──
 let uploadEp = '';
 let uploadToken = '';
@@ -782,8 +818,8 @@ function toggleCard(id, btn) {
 }
 
 function resetPanels() {
-  document.querySelectorAll('#log-section, #upstream-section, #momo-section, #kernel-section, #upload-section').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('#log-btn, #upstream-btn, #momo-btn, #kernel-btn, #upload-btn, #hide-btn').forEach(btn => btn.classList.remove('btn-toggled'));
+  document.querySelectorAll('#log-section, #upstream-section, #momo-section, #kernel-section, #windows-section, #upload-section').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#log-btn, #upstream-btn, #momo-btn, #kernel-btn, #windows-btn, #upload-btn, #hide-btn').forEach(btn => btn.classList.remove('btn-toggled'));
   document.body.classList.remove('hide-sensitive');
 }
 
@@ -809,6 +845,15 @@ function toggleKernel() {
   el.style.display = show ? '' : 'none';
   btn.classList.toggle('btn-toggled', show);
   if (show) setKernelUrl();
+}
+
+function toggleWindows() {
+  const el = document.getElementById('windows-section');
+  const btn = document.getElementById('windows-btn');
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.classList.toggle('btn-toggled', show);
+  if (show) setWindowsUrl();
 }
 
 function toggleLog() {

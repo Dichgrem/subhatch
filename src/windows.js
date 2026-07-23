@@ -1,14 +1,15 @@
 /**
- * subhatch — HPC / Linux desktop sing-box config generator
- * Builds a complete config.json for the sing-box kernel on desktop/Linux.
- * Drop into /etc/sing-box/config.json or point sing-box run -c at it.
+ * subhatch — Windows desktop sing-box config generator
+ * Builds a complete config.json for the sing-box kernel on Windows.
+ * Uses TUN hijack-dns mode (dns_mode: "hijack") with dns_address,
+ * sets system proxy on the mixed inbound, and defaults to 127.0.0.1.
  */
 
 import { exportSingBox, int } from "./export.js";
 
 const PRESETS = {
 	ipv4only_realip: {
-		listen: "0.0.0.0",
+		listen: "127.0.0.1",
 		dnsStrategy: "ipv4_only",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "",
@@ -16,7 +17,7 @@ const PRESETS = {
 		fakeipRange: "198.18.0.0/15",
 	},
 	ipv4only_fakeip: {
-		listen: "0.0.0.0",
+		listen: "127.0.0.1",
 		dnsStrategy: "ipv4_only",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "",
@@ -24,7 +25,7 @@ const PRESETS = {
 		fakeipRange: "198.18.0.0/15",
 	},
 	ipv4plus_realip: {
-		listen: "::",
+		listen: "127.0.0.1",
 		dnsStrategy: "prefer_ipv4",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "fdfe:dcba:9876::1/126",
@@ -33,7 +34,7 @@ const PRESETS = {
 		fakeip6Range: "fc00::/18",
 	},
 	ipv4plus_fakeip: {
-		listen: "::",
+		listen: "127.0.0.1",
 		dnsStrategy: "prefer_ipv4",
 		tunAddress: "172.19.0.1/30",
 		tunAddress6: "fdfe:dcba:9876::1/126",
@@ -45,6 +46,7 @@ const PRESETS = {
 
 /**
  * @param {string[]} nodeUrls — raw proxy node URIs
+ * @param {string[]} nodeUrls — raw proxy node URIs
  * @param {object} options
  * @param {string} [options.preset="ipv4only_realip"]  — "ipv4only_realip" | "ipv4only_fakeip" | "ipv4plus_realip" | "ipv4plus_fakeip"
  * @param {string} [options.selectorTag="GLOBAL"]
@@ -55,11 +57,11 @@ const PRESETS = {
  * @param {string} [options.dnsStrategy]  — override DNS strategy
  * @param {string} [options.listen]       — override listen IP for inbounds
  * @param {string} [options.fakeip]       — set "false" or "0" for real-DNS mode (no FakeIP)
- * @param {number} [options.clashPort=9191]
+ * @param {number} [options.clashPort=9090]
  * @param {string} [options.clashSecret]
  * @param {string} [options.tunName="stun"]
  */
-export function buildKernelConfig(nodeUrls, options = {}) {
+export function buildWindowsConfig(nodeUrls, options = {}) {
 	const presetName = PRESETS[options.preset]
 		? options.preset
 		: "ipv4only_realip";
@@ -79,7 +81,6 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 	// ── Outbounds ──
 	const { outbounds, errors } = exportSingBox(nodeUrls);
 
-	// Ensure no tag collides with reserved names (selector + direct)
 	const reserved = new Set(["direct", s.selectorTag]);
 	for (const o of outbounds) {
 		if (!reserved.has(o.tag)) continue;
@@ -115,20 +116,20 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 			address: tunAddresses,
 			mtu: 9000,
 			auto_route: true,
-			auto_redirect: true,
-			strict_route: false,
+			strict_route: true,
 		},
 		{
 			type: "mixed",
 			listen: s.listen,
 			listen_port: s.mixedPort,
+			set_system_proxy: true,
 		},
 	];
 
 	// ── Route ──
 	const route = {
 		rules: [
-			{ inbound: `tun-in`, port: 53, action: "hijack-dns" },
+			{ inbound: "tun-in", port: 53, action: "hijack-dns" },
 			{ inbound: "dns-in", action: "hijack-dns" },
 			{ ip_is_private: true, outbound: "direct" },
 			{ rule_set: "geosite-cn", outbound: "direct" },
@@ -213,17 +214,15 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 	};
 
 	// ── Experimental ──
-	const clashListen = s.listen === "::" ? "[::]" : s.listen;
-
 	const experimental = {
 		cache_file: {
 			enabled: true,
-			path: "/var/lib/sing-box/cache.db",
+			path: "cache.db",
 			store_fakeip: useFakeip,
 		},
 		clash_api: {
-			external_controller: `${clashListen}:${int(options.clashPort, 9191)}`,
-			external_ui: "/var/lib/sing-box/ui",
+			external_controller: `127.0.0.1:${int(options.clashPort, 9090)}`,
+			external_ui: "ui",
 			external_ui_download_url:
 				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
 			external_ui_download_detour: "direct",

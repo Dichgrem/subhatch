@@ -59,6 +59,7 @@ import {
 	saveUpstreamUrls,
 	syncOneUpstream,
 } from "./upstream.js";
+import { buildWindowsConfig } from "./windows.js";
 
 /** POST /api/login */
 async function handleLogin(req, env) {
@@ -464,6 +465,52 @@ async function handleExportKernel(req, env) {
 	});
 }
 
+/** GET /api/export/windows — export complete config.json for sing-box Windows client */
+async function handleExportWindows(req, env) {
+	const { selected, queryToken, _err } = await resolveExportAuth(
+		req,
+		env,
+		"export-windows",
+	);
+	if (_err) return _err;
+
+	const url = new URL(req.url);
+	const options = {};
+	for (const key of [
+		"preset",
+		"selectorTag",
+		"dnsPort",
+		"mixedPort",
+		"tunAddress",
+		"tunAddress6",
+		"dnsStrategy",
+		"listen",
+		"clashPort",
+		"clashSecret",
+		"tunName",
+		"fakeip",
+	]) {
+		const val = url.searchParams.get(key);
+		if (val != null) options[key] = val;
+	}
+
+	options.preset = normalizePreset(options.preset);
+
+	const result = buildWindowsConfig(selected, options);
+	const { _meta, ...config } = result;
+	if (queryToken)
+		await appendAudit(
+			env.store,
+			"export-windows",
+			clientIP(req),
+			`${_meta.nodeCount} nodes`,
+		);
+	return new Response(JSON.stringify(config, null, 2), {
+		status: 200,
+		headers: { "Content-Type": "application/json" },
+	});
+}
+
 // ── Main router ──
 export async function handleRequest(req, env) {
 	const url = new URL(req.url);
@@ -484,6 +531,8 @@ export async function handleRequest(req, env) {
 		return handleExportMomo(req, env);
 	if (path === "/api/export/kernel" && method === "GET")
 		return handleExportKernel(req, env);
+	if (path === "/api/export/windows" && method === "GET")
+		return handleExportWindows(req, env);
 	if (path === "/api/sub-url" && method === "GET")
 		return handleSubUrl(req, env);
 	if (path === "/api/sub-token" && method === "PUT")

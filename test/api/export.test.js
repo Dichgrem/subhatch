@@ -80,3 +80,29 @@ describe("GET /api/export/kernel", () => {
 		assert.equal(status, 200);
 	});
 });
+
+describe("GET /api/export/windows", () => {
+	it("returns complete config.json", async () => {
+		const { status, data } = await api("/api/export/windows", { token, baseUrl });
+		assert.equal(status, 200);
+		assert(Array.isArray(data.inbounds));
+		assert(data.experimental?.clash_api);
+	});
+
+	it("TUN inbound uses strict_route and auto_route", async () => {
+		const { status, data } = await api("/api/export/windows", { token, baseUrl });
+		assert.equal(status, 200);
+		const tun = data.inbounds.find((i) => i.type === "tun");
+		assert(tun);
+		assert.equal(tun.auto_route, true);
+		assert.equal(tun.strict_route, true);
+	});
+
+	it("mixed inbound sets system proxy", async () => {
+		const { status, data } = await api("/api/export/windows", { token, baseUrl });
+		assert.equal(status, 200);
+		const mixed = data.inbounds.find((i) => i.type === "mixed");
+		assert(mixed);
+		assert.equal(mixed.set_system_proxy, true);
+	});
+});

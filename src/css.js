@@ -312,6 +312,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #kernel-url-text{position:relative}
 .hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #windows-url-text{position:relative}
+.hide-sensitive #windows-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upload-ep-text{position:relative}
 .hide-sensitive #upload-ep-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upload-token-text{position:relative}

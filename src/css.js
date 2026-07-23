@@ -86,6 +86,8 @@ header p{font-size:.75rem;color:var(--muted);letter-spacing:.1em}
 /* ── views ── */
 .view{display:none}
 .view.active{display:block}
+.admin-only{display:none}
+.admin-only.show{display:flex}
 
 /* ── card ── */
 .card{
@@ -308,12 +310,8 @@ hr{border:none;border-top:1px solid var(--border);margin:18px 0}
 .hide-sensitive .node-name::after{content:'•••••••';position:absolute;left:0;top:50%;transform:translateY(-50%);font-size:.72rem;color:var(--muted);letter-spacing:4px;text-indent:0}
 .hide-sensitive #sub-url-text{position:relative}
 .hide-sensitive #sub-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
-.hide-sensitive #momo-url-text{position:relative}
-.hide-sensitive #momo-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
-.hide-sensitive #kernel-url-text{position:relative}
-.hide-sensitive #kernel-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
-.hide-sensitive #windows-url-text{position:relative}
-.hide-sensitive #windows-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
+.hide-sensitive #client-url-text{position:relative}
+.hide-sensitive #client-url-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upload-ep-text{position:relative}
 .hide-sensitive #upload-ep-text::before{content:'Hidden for screenshot';position:absolute;inset:0;display:flex;align-items:center;color:var(--muted);font-style:italic;background:var(--s0);border-radius:6px}
 .hide-sensitive #upload-token-text{position:relative}

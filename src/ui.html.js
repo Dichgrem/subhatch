@@ -10,14 +10,13 @@ ${CSS}
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header id="main-header">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h1 style="margin-bottom:2px">Sub Manager <span style="font-size:.55rem;color:var(--muted);font-weight:400;letter-spacing:0" id="ver-tag"></span></h1>
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto;align-items:baseline">
       <p style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">VLESS · VMess · Trojan · Hysteria2 · TUIC · SS</p>
-      <div style="display:flex;align-items:center;gap:12px;font-size:.75rem">
+      <div class="admin-only" id="header-stats" style="align-items:center;gap:12px;font-size:.75rem">
         <span class="user-dot"></span>
         <div class="stats" id="stats-bar">
           <span>Nodes: <strong id="stat-total">0</strong></span>
@@ -51,17 +50,16 @@ ${CSS}
     </div>
     <div class="topbar">
       <div class="topbar-right">
-        <button class="btn btn-ghost btn-sm btn-toggled" id="sub-card-btn" onclick="toggleCard('sub-card',this)">Sub</button>
-        <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="toggleUpload()" title="Show Node Upload">Upload</button>
-        <button class="btn btn-ghost btn-sm" id="momo-btn" onclick="toggleMomo()" title="Show Momo URL">Momo</button>
-        <button class="btn btn-ghost btn-sm" id="kernel-btn" onclick="toggleKernel()" title="Show Kernel URL">Kernel</button>
-        <button class="btn btn-ghost btn-sm" id="windows-btn" onclick="toggleWindows()" title="Show Windows URL">Win</button>
-        <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="toggleUpstream()" title="Show Upstream Sources">Upstream</button>
-        <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="toggleCard('node-card',this)">Nodes</button>
-        <button class="btn btn-ghost btn-sm" id="log-btn" onclick="toggleLog()" title="Show Audit Log">Log</button>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="sub-card-btn" onclick="togglePanel(this)">Sub</button>
+        <button class="btn btn-ghost btn-sm" id="client-btn" onclick="togglePanel(this)" title="Show Client URL">Client</button>
+        <button class="btn btn-ghost btn-sm" id="upstream-btn" onclick="togglePanel(this)" title="Show Upstream Sources">Upstream</button>
+        <button class="btn btn-ghost btn-sm" id="upload-btn" onclick="togglePanel(this)" title="Show Node Upload">Upload</button>
+        <button class="btn btn-ghost btn-sm btn-toggled" id="node-card-btn" onclick="togglePanel(this)">Nodes</button>
+        <button class="btn btn-ghost btn-sm" id="log-btn" onclick="togglePanel(this)" title="Show Audit Log">Log</button>
         <button class="btn btn-ghost btn-sm" id="hide-btn" onclick="toggleHide()">Hide</button>
-        <a class="btn btn-ghost btn-sm btn-icon" href="https://github.com/Dichgrem/subhatch" target="_blank" rel="noopener" title="GitHub" style="text-decoration:none">GitHub</a>
-        <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">☀</button>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">Light</button>
+        <a class="btn btn-ghost btn-sm btn-icon" href="https://github.com/Dichgrem/subhatch" target="_blank" rel="noopener" title="GitHub"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="display:block"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
       </div>
     </div>
 
@@ -88,71 +86,29 @@ ${CSS}
           <button class="btn btn-ghost btn-sm" onclick="createToken()">+ Create Token</button>
         </div>
       </div>
-      <div id="upload-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label" style="font-size:11px;margin-bottom:6px">Node Upload</div>
-        <div class="sub-url-wrap">
-          <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">URL</span>
-          <code id="upload-ep-text" style="font-size:11px">—</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadEp()" title="Copy URL">⎘</button>
-        </div>
-        <div class="sub-url-wrap" style="margin-top:6px">
-          <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Token</span>
-          <code id="upload-token-text" style="font-size:11px">—</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadToken()" title="Copy Token">⎘</button>
-        </div>
-        <div class="field-hint">
-          <code>POST</code> the endpoint with <code>{"nodes":["vless://..."]}</code> and <code>?token=&lt;TOKEN&gt;</code> to push nodes.
-        </div>
+    </div>
+
+    <!-- Client export -->
+    <div class="card" id="client-section" style="display:none">
+      <div class="card-label" style="margin-bottom:6px">Client Export</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+        <select id="client-platform" onchange="setClientUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
+          <option value="kernel">Kernel (HPC/Linux)</option>
+          <option value="windows">Windows</option>
+          <option value="momo">OpenWrt-momo</option>
+        </select>
+        <select id="client-preset" onchange="setClientUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
+          <option value="ipv4only_realip">IPv4 + RealIP</option>
+          <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
+          <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
+          <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
+        </select>
       </div>
-      <div id="momo-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label" style="font-size:11px;margin-bottom:6px">OpenWrt-momo</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <select id="momo-preset" onchange="setMomoUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
-            <option value="ipv4only_realip">IPv4 + RealIP</option>
-            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
-            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
-            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
-          </select>
-        </div>
-        <div class="sub-url-wrap">
-          <code id="momo-url-text" style="font-size:11px">Loading…</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyMomoUrl()" title="Copy Momo URL">⎘</button>
-        </div>
-        <div class="field-hint">Paste into momo Subscription URL — returns full config.json.</div>
+      <div class="sub-url-wrap">
+        <code id="client-url-text" style="font-size:11px">Loading…</code>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="copyClientUrl()" title="Copy URL">⎘</button>
       </div>
-      <div id="kernel-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label" style="font-size:11px;margin-bottom:6px">sing-box Kernel (HPC)</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <select id="kernel-preset" onchange="setKernelUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
-            <option value="ipv4only_realip">IPv4 + RealIP</option>
-            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
-            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
-            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
-          </select>
-        </div>
-        <div class="sub-url-wrap">
-          <code id="kernel-url-text" style="font-size:11px">Loading…</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyKernelUrl()" title="Copy Kernel URL">⎘</button>
-        </div>
-        <div class="field-hint">Point sing-box at this URL — returns full config.json for Linux desktop / HPC.</div>
-      </div>
-      <div id="windows-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-        <div class="card-label" style="font-size:11px;margin-bottom:6px">sing-box Windows</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <select id="windows-preset" onchange="setWindowsUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
-            <option value="ipv4only_realip">IPv4 + RealIP</option>
-            <option value="ipv4only_fakeip">IPv4 + FakeIP</option>
-            <option value="ipv4plus_realip">IPv4+6 + RealIP</option>
-            <option value="ipv4plus_fakeip">IPv4+6 + FakeIP</option>
-          </select>
-        </div>
-        <div class="sub-url-wrap">
-          <code id="windows-url-text" style="font-size:11px">Loading…</code>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="copyWindowsUrl()" title="Copy Windows URL">⎘</button>
-        </div>
-        <div class="field-hint">Point sing-box at this URL — returns full config.json for Windows desktop.</div>
-      </div>
+      <div class="field-hint" id="client-hint">Point sing-box at this URL — returns full config.json.</div>
     </div>
 
     <!-- Upstream sources -->
@@ -166,6 +122,25 @@ ${CSS}
       </div>
       <div id="upstream-list" style="margin-top:12px">
         <div style="text-align:center;color:var(--muted);padding:20px 0">No upstream sources. Click + Add.</div>
+      </div>
+    </div>
+
+    <!-- Node upload -->
+    <div class="card" id="upload-section" style="display:none">
+      <div class="card-label" style="margin-bottom:6px">Node Upload</div>
+      <div class="sub-url-wrap">
+        <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">URL</span>
+        <code id="upload-ep-text" style="font-size:11px">—</code>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadEp()" title="Copy URL">⎘</button>
+      </div>
+      <div class="sub-url-wrap" style="margin-top:6px">
+        <span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Token</span>
+        <code id="upload-token-text" style="font-size:11px">—</code>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="rotateUploadToken()" title="Rotate">🎲</button>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="copyUploadToken()" title="Copy Token">⎘</button>
+      </div>
+      <div class="field-hint">
+        <code>POST</code> the endpoint with <code>{"nodes":["vless://..."]}</code> and <code>?token=&lt;TOKEN&gt;</code> to push nodes.
       </div>
     </div>
 
@@ -241,7 +216,7 @@ ${CSS}
 
 <script>
 // ── State ──
-const VERSION = "5.2.1";
+const VERSION = "5.3.0";
 let SESSION = localStorage.getItem('sub_session') || null;
 let storedNodes = [];   // nodes from KV (editable)
 let envNodes    = [];   // nodes from env vars (read-only)
@@ -259,14 +234,38 @@ const SCHEMES = ['vless://','vmess://','trojan://','ss://','ssr://','hysteria2:/
     if (ok) { showMain(); await loadAll(); return; }
     SESSION = null; localStorage.removeItem('sub_session');
   }
-  show('v-login');
+  switchView('v-login');
   document.getElementById('pwd-input').focus();
 })();
 
 // ── Views ──
-function show(id) {
+const PANELS = {
+  'sub-card-btn':  { el: 'sub-card' },
+  'client-btn':    { el: 'client-section', onShow: setClientUrl },
+  'upstream-btn':  { el: 'upstream-section', onShow() { loadUpstream(); loadUploadUrl(); } },
+  'upload-btn':    { el: 'upload-section', onShow() { loadUploadUrl(); } },
+  'node-card-btn': { el: 'node-card' },
+  'log-btn':       { el: 'log-section', onShow: loadAuditLog },
+};
+
+function togglePanel(btn) {
+  const cfg = PANELS[btn.id];
+  if (!cfg) return;
+  const el = document.getElementById(cfg.el);
+  const show = el.style.display === 'none';
+  el.style.display = show ? '' : 'none';
+  btn.classList.toggle('btn-toggled', show);
+  if (show && cfg.onShow) cfg.onShow();
+}
+
+function switchView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  document.getElementById('header-stats').classList.toggle('show', id === 'v-main');
+  if (id === 'v-login') {
+    resetPanels();
+    document.getElementById('login-err').textContent = '';
+  }
 }
 
 // ── API ──
@@ -323,12 +322,11 @@ document.getElementById('pwd-input').addEventListener('keydown', e => {
 
 // ── Logout ──
 async function doLogout() {
-  await api('POST', '/api/logout');
+  try { await api('POST', '/api/logout'); } catch {}
   SESSION = null; localStorage.removeItem('sub_session');
   storedNodes = []; envNodes = []; subUrl = '';
   renderNodes();
-  resetPanels();
-  show('v-login');
+  switchView('v-login');
   document.getElementById('pwd-input').focus();
 }
 
@@ -361,7 +359,7 @@ async function loadTokens() {
   renderTokens();
 }
 
-function showMain() { show('v-main'); checkUpdate(); }
+function showMain() { switchView('v-main'); checkUpdate(); }
 
 // ── Render nodes ──
 function renderNodes() {
@@ -676,61 +674,32 @@ async function exportSingBox() {
   else toast(msg, "ok");
 }
 
-// ── Momo URL ──
-async function copyMomoUrl() {
+// ── Client URL ──
+async function copyClientUrl() {
   if (!subUrl) return;
-  const preset = document.getElementById("momo-preset").value;
-  const momoUrl = subUrl.replace("/sub?", "/api/export/momo?") + "&preset=" + preset;
+  const platform = document.getElementById("client-platform").value;
+  const preset = document.getElementById("client-preset").value;
+  const clientUrl = subUrl.replace("/sub?", "/api/export/" + platform + "?") + "&preset=" + preset;
   try {
-    await navigator.clipboard.writeText(momoUrl);
-    toast("Momo URL copied", "ok");
+    await navigator.clipboard.writeText(clientUrl);
+    toast("URL copied", "ok");
   } catch {
-    prompt("Copy this URL:", momoUrl);
+    prompt("Copy this URL:", clientUrl);
   }
 }
 
-function setMomoUrl() {
-  if (!subUrl) { document.getElementById("momo-url-text").textContent = "—"; return; }
-  const preset = document.getElementById("momo-preset").value;
-  document.getElementById("momo-url-text").textContent = subUrl.replace("/sub?", "/api/export/momo?") + "&preset=" + preset;
-}
+const CLIENT_HINTS = {
+  kernel: "Point sing-box at this URL — returns full config.json for Linux desktop / HPC.",
+  windows: "Point sing-box at this URL — returns full config.json for Windows desktop.",
+  momo: "Paste into momo Subscription URL — returns full config.json.",
+};
 
-// ── Kernel URL ──
-async function copyKernelUrl() {
-  if (!subUrl) return;
-  const preset = document.getElementById("kernel-preset").value;
-  const kernelUrl = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
-  try {
-    await navigator.clipboard.writeText(kernelUrl);
-    toast("Kernel URL copied", "ok");
-  } catch {
-    prompt("Copy this URL:", kernelUrl);
-  }
-}
-
-function setKernelUrl() {
-  if (!subUrl) { document.getElementById("kernel-url-text").textContent = "—"; return; }
-  const preset = document.getElementById("kernel-preset").value;
-  document.getElementById("kernel-url-text").textContent = subUrl.replace("/sub?", "/api/export/kernel?") + "&preset=" + preset;
-}
-
-// ── Windows URL ──
-async function copyWindowsUrl() {
-  if (!subUrl) return;
-  const preset = document.getElementById("windows-preset").value;
-  const windowsUrl = subUrl.replace("/sub?", "/api/export/windows?") + "&preset=" + preset;
-  try {
-    await navigator.clipboard.writeText(windowsUrl);
-    toast("Windows URL copied", "ok");
-  } catch {
-    prompt("Copy this URL:", windowsUrl);
-  }
-}
-
-function setWindowsUrl() {
-  if (!subUrl) { document.getElementById("windows-url-text").textContent = "—"; return; }
-  const preset = document.getElementById("windows-preset").value;
-  document.getElementById("windows-url-text").textContent = subUrl.replace("/sub?", "/api/export/windows?") + "&preset=" + preset;
+function setClientUrl() {
+  if (!subUrl) { document.getElementById("client-url-text").textContent = "—"; return; }
+  const platform = document.getElementById("client-platform").value;
+  const preset = document.getElementById("client-preset").value;
+  document.getElementById("client-url-text").textContent = subUrl.replace("/sub?", "/api/export/" + platform + "?") + "&preset=" + preset;
+  document.getElementById("client-hint").textContent = CLIENT_HINTS[platform] || "";
 }
 
 // ── Upload URL ──
@@ -809,17 +778,9 @@ async function showTokenQR(token) {
   await showQR(\`\${origin}/sub?token=\${encodeURIComponent(token)}\`);
 }
 
-// ── Card toggles ──
-function toggleCard(id, btn) {
-  const el = document.getElementById(id);
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-}
-
 function resetPanels() {
-  document.querySelectorAll('#log-section, #upstream-section, #momo-section, #kernel-section, #windows-section, #upload-section').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('#log-btn, #upstream-btn, #momo-btn, #kernel-btn, #windows-btn, #upload-btn, #hide-btn').forEach(btn => btn.classList.remove('btn-toggled'));
+  document.querySelectorAll('#log-section, #upstream-section, #client-section, #upload-section').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#log-btn, #upstream-btn, #client-btn, #upload-btn, #hide-btn, #node-card-btn, #sub-card-btn').forEach(btn => btn.classList.remove('btn-toggled'));
   document.body.classList.remove('hide-sensitive');
 }
 
@@ -829,61 +790,7 @@ function toggleHide() {
   document.getElementById('hide-btn').classList.toggle('btn-toggled', document.body.classList.contains('hide-sensitive'));
 }
 
-function toggleMomo() {
-  const el = document.getElementById('momo-section');
-  const btn = document.getElementById('momo-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) setMomoUrl();
-}
-
-function toggleKernel() {
-  const el = document.getElementById('kernel-section');
-  const btn = document.getElementById('kernel-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) setKernelUrl();
-}
-
-function toggleWindows() {
-  const el = document.getElementById('windows-section');
-  const btn = document.getElementById('windows-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) setWindowsUrl();
-}
-
-function toggleLog() {
-  const el = document.getElementById('log-section');
-  const btn = document.getElementById('log-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) loadAuditLog();
-}
-
-function toggleUpload() {
-  const el = document.getElementById('upload-section');
-  const btn = document.getElementById('upload-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) loadUploadUrl();
-}
-
 // ── Upstream sources ──
-function toggleUpstream() {
-  const el = document.getElementById('upstream-section');
-  const btn = document.getElementById('upstream-btn');
-  const show = el.style.display === 'none';
-  el.style.display = show ? '' : 'none';
-  btn.classList.toggle('btn-toggled', show);
-  if (show) loadUpstream();
-}
-
 async function loadUpstream() {
   const { ok, data } = await api('GET', '/api/upstream');
   if (!ok) return;
@@ -1037,7 +944,7 @@ async function clearAuditLog() {
 function initTheme() {
   if (localStorage.getItem('sub_theme') === 'light') {
     document.documentElement.classList.add('light');
-    document.getElementById('theme-btn').textContent = '☾';
+    document.getElementById('theme-btn').textContent = 'Dark';
   }
 }
 
@@ -1047,11 +954,11 @@ function toggleTheme() {
   if (html.classList.contains('light')) {
     html.classList.remove('light');
     localStorage.setItem('sub_theme', 'dark');
-    btn.textContent = '☀';
+    btn.textContent = 'Light';
   } else {
     html.classList.add('light');
     localStorage.setItem('sub_theme', 'light');
-    btn.textContent = '☾';
+    btn.textContent = 'Dark';
   }
 }
 

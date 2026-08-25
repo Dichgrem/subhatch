@@ -90,7 +90,7 @@ https://你的域名/api/export/momo?token=<sub_token>&preset=ipv4only_realip
 - `inbounds`：dns-in（1053）、redirect-in（7890）、tproxy-in（7891）、tun-in（momo 接口）
 - `outbounds`：所有节点 + GLOBAL selector + direct
 - `route`：嗅探 → 劫持 DNS → 私有 IP 直连 → geosite-cn → geoip-cn → selector
-- `experimental`：cache_file + clash_api（zashboard 面板，端口 9095）
+- `experimental`：cache_file + clash_api（Yacd-meta 面板，端口 9095）
 
 ---
 

@@ -245,7 +245,7 @@ https://your-domain.com/api/export/momo?token=<你的订阅token>
 - `inbounds`：DNS 入站 + Redirect + TPROXY + TUN 入站
 - `outbounds`：所有转换后的节点 + 一个 `selector`（含所有节点 + `direct`）
 - `route`：嗅探 → 劫持 DNS → 私有 IP 直连 → geosite-cn → geoip-cn → 最终走选择器
-- `experimental`：缓存文件（FakeIP 持久化）+ Clash API（基于 zashboard 面板，端口 9095）
+- `experimental`：缓存文件（FakeIP 持久化）+ Clash API（基于 Yacd-meta 面板，端口 9095）
 
 ---
 

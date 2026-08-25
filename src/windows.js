@@ -224,7 +224,7 @@ export function buildWindowsConfig(nodeUrls, options = {}) {
 			external_controller: `127.0.0.1:${int(options.clashPort, 9090)}`,
 			external_ui: "ui",
 			external_ui_download_url:
-				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
+				"https://codeload.github.com/MetaCubeX/Yacd-meta/zip/refs/heads/gh-pages",
 			external_ui_download_detour: "direct",
 			secret: options.clashSecret || "",
 			default_mode: "rule",

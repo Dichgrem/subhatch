@@ -236,7 +236,7 @@ export function buildMomoConfig(nodeUrls, options = {}) {
 			external_controller: `${clashListen}:${int(options.clashPort, 9095)}`,
 			external_ui: "/etc/momo/run/ui",
 			external_ui_download_url:
-				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
+				"https://codeload.github.com/MetaCubeX/Yacd-meta/zip/refs/heads/gh-pages",
 			external_ui_download_detour: "direct",
 			secret: options.clashSecret || "",
 			default_mode: "rule",

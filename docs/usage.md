@@ -90,7 +90,7 @@ https://your-domain.com/api/export/momo?token=<sub_token>&preset=ipv4only_realip
 - `inbounds`: dns-in (1053), redirect-in (7890), tproxy-in (7891), tun-in (momo device)
 - `outbounds`: all nodes + GLOBAL selector + direct
 - `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → selector
-- `experimental`: cache_file + clash_api (zashboard dashboard, port 9095)
+- `experimental`: cache_file + clash_api (Yacd-meta dashboard, port 9095)
 
 ---
 

@@ -253,7 +253,7 @@ The response includes:
 - `inbounds`: `dns-in` (direct:1053), `redirect-in` (redirect:7890), `tproxy-in` (tproxy:7891), `tun-in` (tun, momo device)
 - `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
 - `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → final to selector
-- `experimental`: cache_file (fakeip persistence) + clash_api (zashboard dashboard on port 9095)
+- `experimental`: cache_file (fakeip persistence) + clash_api (Yacd-meta dashboard on port 9095)
 
 ---
 
@@ -308,7 +308,7 @@ The response includes:
 - `inbounds`: `dns-in` (direct:1053), `tun-in` (tun, stun device, auto_route), `mixed` (HTTP/SOCKS proxy)
 - `outbounds`: all converted nodes + a `selector` outbound containing all node tags + `direct` for bypass
 - `route`: hijack-dns → private-ip → geosite-cn → geoip-cn → sniff → final to selector; auto_detect_interface
-- `experimental`: cache_file + clash_api (zashboard dashboard on port 9191)
+- `experimental`: cache_file + clash_api (Yacd-meta dashboard on port 9191)
 
 ---
 

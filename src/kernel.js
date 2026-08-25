@@ -225,7 +225,7 @@ export function buildKernelConfig(nodeUrls, options = {}) {
 			external_controller: `${clashListen}:${int(options.clashPort, 9191)}`,
 			external_ui: "/var/lib/sing-box/ui",
 			external_ui_download_url:
-				"https://codeload.github.com/Zephyruso/zashboard/zip/refs/heads/gh-pages",
+				"https://codeload.github.com/MetaCubeX/Yacd-meta/zip/refs/heads/gh-pages",
 			external_ui_download_detour: "direct",
 			secret: options.clashSecret || "",
 			default_mode: "rule",

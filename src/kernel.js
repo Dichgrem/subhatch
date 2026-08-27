@@ -30,7 +30,7 @@ const PRESETS = {
 		tunAddress6: "fdfe:dcba:9876::1/126",
 		fakeip: false,
 		fakeipRange: "198.18.0.0/15",
-		fakeip6Range: "fc00::/18",
+		fakeip6Range: "2001:2::0/64",
 	},
 	ipv4plus_fakeip: {
 		listen: "::",
@@ -39,7 +39,7 @@ const PRESETS = {
 		tunAddress6: "fdfe:dcba:9876::1/126",
 		fakeip: true,
 		fakeipRange: "198.18.0.0/15",
-		fakeip6Range: "fc00::/18",
+		fakeip6Range: "2001:2::0/64",
 	},
 };
 

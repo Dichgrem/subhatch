@@ -142,17 +142,18 @@ export function buildWindowsConfig(nodeUrls, options = {}) {
 				type: "remote",
 				format: "binary",
 				url: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs",
-				download_detour: "direct",
+				http_client: "rule-set-direct",
 			},
 			{
 				tag: "geoip-cn",
 				type: "remote",
 				format: "binary",
 				url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/cn.srs",
-				download_detour: "direct",
+				http_client: "rule-set-direct",
 			},
 		],
 		final: s.selectorTag,
+		default_http_client: "rule-set-direct",
 		auto_detect_interface: true,
 		default_domain_resolver: "public",
 	};
@@ -237,6 +238,7 @@ export function buildWindowsConfig(nodeUrls, options = {}) {
 		inbounds,
 		outbounds: outboundsFinal,
 		route,
+		http_clients: [{ tag: "rule-set-direct" }],
 		experimental,
 		_meta: {
 			nodeCount: outbounds.length,

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [5.3.0] - 2026-09-01
+
+### Changed
+- Migrate generated configs to sing-box 1.14.0:
+  - rule-set download channel `download_detour` → `http_client` (add top-level `http_clients` + `route.default_http_client`)
+  - unify `default_domain_resolver` to string form (momo presets)
+
 ## [5.2.1] - 2026-06-23
 
 ### Fixed

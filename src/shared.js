@@ -61,6 +61,12 @@ export function textResp(text, status = 200, headers = {}) {
 	});
 }
 
+export function int(val, fallback) {
+	if (val == null) return fallback;
+	const n = parseInt(val, 10);
+	return Number.isFinite(n) ? n : fallback;
+}
+
 export async function sha256(str) {
 	const buf = await crypto.subtle.digest(
 		"SHA-256",

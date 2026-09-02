@@ -5,7 +5,8 @@
  * and then applies mixin.uc over it (log, NTP, experimental, DNS tweaks).
  */
 
-import { exportSingBox, int } from "./export.js";
+import { exportSingBox } from "./export.js";
+import { int } from "./shared.js";
 
 const PRESETS = {
 	ipv4only_realip: {

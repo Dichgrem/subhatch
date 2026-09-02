@@ -489,9 +489,3 @@ export function exportSingBox(nodes) {
 
 	return { outbounds, errors, skipped };
 }
-
-export function int(val, fallback) {
-	if (val == null) return fallback;
-	const n = parseInt(val, 10);
-	return Number.isFinite(n) ? n : fallback;
-}

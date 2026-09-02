@@ -5,7 +5,8 @@
  * sets system proxy on the mixed inbound, and defaults to 127.0.0.1.
  */
 
-import { exportSingBox, int } from "./export.js";
+import { exportSingBox } from "./export.js";
+import { int } from "./shared.js";
 
 const PRESETS = {
 	ipv4only_realip: {

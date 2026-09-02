@@ -4,7 +4,8 @@
  * Drop into /etc/sing-box/config.json or point sing-box run -c at it.
  */
 
-import { exportSingBox, int } from "./export.js";
+import { exportSingBox } from "./export.js";
+import { int } from "./shared.js";
 
 const PRESETS = {
 	ipv4only_realip: {

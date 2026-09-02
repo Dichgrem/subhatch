@@ -57,41 +57,29 @@ export async function handleSub(req, env) {
 	let allowed;
 	let who = "";
 
-	if (primary) {
-		if (!t) return textResp("Unauthorized", 401);
-		if (t === primary) {
-			allowed = "all";
-			who = "primary";
-		} else if (scoped[t]) {
-			allowed = scoped[t].nodes;
-			who = scoped[t].name || t.slice(0, 8);
-		} else {
-			const ip = clientIP(req);
-			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "sub", "WARN");
-				return textResp("Too many requests", 429);
-			}
-			await recordBrute(env.store, ip);
-			return textResp("Unauthorized", 401);
-		}
+	// 判定访问权限：主 token 存在时强制鉴权（requireToken）；否则无 token 匿名放行（public）
+	const requireToken = Boolean(primary);
+	if (requireToken && !t) return textResp("Unauthorized", 401);
+
+	if (primary && t === primary) {
+		allowed = "all";
+		who = "primary";
+	} else if (t && scoped[t]) {
+		allowed = scoped[t].nodes;
+		who = scoped[t].name || t.slice(0, 8);
+	} else if (!requireToken && !t) {
+		allowed = "all";
+		who = "public";
 	} else {
-		if (!t) {
-			allowed = "all";
-			who = "public";
-		} else if (scoped[t]) {
-			allowed = scoped[t].nodes;
-			who = scoped[t].name || t.slice(0, 8);
-		} else {
-			const ip = clientIP(req);
-			const brute = await checkBrute(env.store, ip);
-			if (brute.blocked) {
-				await appendAudit(env.store, "blocked", ip, "sub", "WARN");
-				return textResp("Too many requests", 429);
-			}
-			await recordBrute(env.store, ip);
-			return textResp("Unauthorized", 401);
+		// token 无效（主 token 模式缺 token 已在上面拦截；此处为未知/伪造 token）——暴力尝试防护
+		const ip = clientIP(req);
+		const brute = await checkBrute(env.store, ip);
+		if (brute.blocked) {
+			await appendAudit(env.store, "blocked", ip, "sub", "WARN");
+			return textResp("Too many requests", 429);
 		}
+		await recordBrute(env.store, ip);
+		return textResp("Unauthorized", 401);
 	}
 
 	const envNodes = parseEnvNodes(env.VLESS_NODES);

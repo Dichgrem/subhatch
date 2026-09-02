@@ -3,6 +3,8 @@
  * Converts proxy node URLs to sing-box outbound JSON config.
  */
 
+import { VALID_SCHEMES } from "./shared.js";
+
 // ── Base64 helpers (workers + node compat) ──
 function b64decode(str) {
 	// Normalize base64url
@@ -27,18 +29,6 @@ function b64utf8(str) {
 }
 
 // ── Helpers ──
-const ALLOWED_SCHEMES = [
-	"vless://",
-	"vmess://",
-	"trojan://",
-	"ss://",
-	"ssr://",
-	"hysteria2://",
-	"hy2://",
-	"tuic://",
-	"anytls://",
-	"naive://",
-];
 
 function fragName(raw) {
 	const i = raw.lastIndexOf("#");
@@ -415,7 +405,7 @@ export function exportSingBox(nodes) {
 		if (!s) continue;
 
 		let scheme = "";
-		for (const sc of ALLOWED_SCHEMES) {
+		for (const sc of VALID_SCHEMES) {
 			if (s.startsWith(sc)) {
 				scheme = sc.replace("://", "");
 				break;

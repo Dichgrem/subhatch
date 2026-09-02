@@ -224,6 +224,7 @@ let subUrl      = '';
 let tokens      = {};
 let editingToken = null;
 
+// ⚠️ 与 shared.js VALID_SCHEMES 保持同步（浏览器端内联代码无法 import 服务端模块）
 const SCHEMES = ['vless://','vmess://','trojan://','ss://','ssr://','hysteria2://','hy2://','tuic://','anytls://','naive://'];
 
 // ── Boot ──

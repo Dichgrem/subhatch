@@ -863,26 +863,42 @@ async function deleteUpstream(idx) {
 // ── Version check ──
 document.getElementById('ver-tag').textContent = 'v' + VERSION;
 
+// ETag 协商缓存：GitHub 304 响应不计入 API 配额 → 每次登录都查，新版立即可见
+const UPDATE_CACHE_KEY = 'sub_update_check';
+
+function showUpdateBanner(latest) {
+  if (!latest) return;
+  const parts = VERSION.split('.');
+  const latestParts = latest.split('.');
+  for (let i = 0; i < 3; i++) {
+    const a = parseInt(parts[i]) || 0;
+    const b = parseInt(latestParts[i]) || 0;
+    if (b > a) {
+      document.getElementById('update-msg').textContent = \`New version available: v\${latest}\`;
+      document.getElementById('update-banner').style.display = 'flex';
+      return;
+    }
+    if (a > b) return;
+  }
+}
+
 async function checkUpdate() {
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(UPDATE_CACHE_KEY) || 'null'); } catch {}
   try {
-    const r = await fetch('https://api.github.com/repos/Dichgrem/subhatch/releases/latest');
+    const headers = cached && cached.etag ? { 'If-None-Match': cached.etag } : {};
+    const r = await fetch('https://api.github.com/repos/Dichgrem/subhatch/releases/latest', { headers });
+    if (r.status === 304) { showUpdateBanner(cached && cached.latest); return; } // 无新版，不占配额
     if (!r.ok) return;
     const release = await r.json();
     const latest = (release.tag_name || '').replace(/^v/, '');
-    if (!latest) return;
-    const parts = VERSION.split('.');
-    const latestParts = latest.split('.');
-    for (let i = 0; i < 3; i++) {
-      const a = parseInt(parts[i]) || 0;
-      const b = parseInt(latestParts[i]) || 0;
-      if (b > a) {
-        document.getElementById('update-msg').textContent = \`New version available: v\${latest}\`;
-        document.getElementById('update-banner').style.display = 'flex';
-        return;
-      }
-      if (a > b) return;
+    if (latest) {
+      localStorage.setItem(UPDATE_CACHE_KEY, JSON.stringify({ etag: r.headers.get('ETag') || '', latest }));
     }
-  } catch {}
+    showUpdateBanner(latest);
+  } catch {
+    if (cached && cached.latest) showUpdateBanner(cached.latest); // 网络失败：缓存兜底
+  }
 }
 
 // ── Toast ──

@@ -74,7 +74,7 @@ Dropdown with 4 options:
 2. Press ⎘ to copy the URL
 3. Paste into momo's "Subscription" or "File" profile
 
-Momo will auto-sync upstream sources on each request (when upstream sources exist). Add `?refresh=0` to skip.
+Momo auto-syncs upstream sources on each request (when upstream sources exist), deduplicated by a 60s minimum interval. Add `?refresh=0` to skip. Failed sources are served from cache with an `X-Upstream-Warning` header.
 
 URL format:
 
@@ -192,7 +192,7 @@ Each source shows: name, URL, last sync time, node count / error message.
 - Each sync **replaces entirely**, not appends
 - Failed syncs retain the previous cache
 - Sync results written to audit log (`upstream-sync`): success → INFO, failure → ERROR
-- Momo / Kernel exports **auto-sync upstream by default** (add `?refresh=0` to skip)
+- Momo / Kernel exports **auto-sync upstream by default** (60s min interval per source; add `?refresh=0` to skip)
 
 ---
 

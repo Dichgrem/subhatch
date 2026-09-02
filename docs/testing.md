@@ -1,6 +1,6 @@
 # Testing
 
-115 automated tests using Node.js built-in `node:test` + `node:assert`. Zero dependencies.
+119 automated tests using Node.js built-in `node:test` + `node:assert`. Zero dependencies.
 
 ## Quick Start
 
@@ -95,4 +95,4 @@ describe("GET /api/example", () => {
 | Upstream CRUD + SSRF guard | 7 |
 | Audit log | 4 |
 | End-to-end flow | 12 |
-| **Total** | **115** |
+| **Total** | **119** |

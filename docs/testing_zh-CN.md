@@ -1,6 +1,6 @@
 # 测试
 
-115 项自动化测试，使用 Node.js 内置的 `node:test` + `node:assert`。零依赖。
+119 项自动化测试，使用 Node.js 内置的 `node:test` + `node:assert`。零依赖。
 
 ## 快速开始
 
@@ -95,4 +95,4 @@ describe("GET /api/example", () => {
 | 上游 CRUD + SSRF 防护 | 7 |
 | 审计日志 | 4 |
 | 端到端流程 | 12 |
-| **总计** | **115** |
+| **总计** | **119** |

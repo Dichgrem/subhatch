@@ -417,7 +417,9 @@ Pull and refresh node cache for one or all upstream sources. Session auth.
 
 ### Refresh on export
 
-Upstream sources are synced by default on every `/api/export/momo` or `/api/export/kernel` request. Add `?refresh=0` to skip the sync.
+Upstream sources are synced on `/api/export/momo` and `/api/export/kernel` requests (freshness-first design), with a **60s minimum interval** between syncs of the same source to avoid duplicate concurrent fetches. Add `?refresh=0` to skip the sync entirely.
+
+If any source fails to sync, the response includes an `X-Upstream-Warning` header (e.g. `1/2 upstream sources failed to sync, serving cached nodes`) and previously cached nodes are served instead.
 
 ### Storage
 

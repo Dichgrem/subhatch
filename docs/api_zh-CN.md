@@ -396,7 +396,9 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 
 ### 导出时刷新
 
-上游来源默认在每次 `/api/export/momo` 或 `/api/export/kernel` 请求时同步。加 `?refresh=0` 跳过同步。
+`/api/export/momo` 与 `/api/export/kernel` 请求时默认同步上游来源（新鲜度优先设计），同一来源**60 秒最小同步间隔**（防止并发请求重复拉取）。加 `?refresh=0` 可完全跳过同步。
+
+若有来源同步失败，响应会带 `X-Upstream-Warning` 响应头（如 `1/2 upstream sources failed to sync, serving cached nodes`），并降级返回缓存的节点。
 
 ### 存储
 

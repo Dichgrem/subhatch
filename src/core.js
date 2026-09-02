@@ -304,7 +304,7 @@ async function handleExportSingBox(req, env) {
 
 /** Resolve auth for export endpoints — session or sub-token.
  *  Returns { selected, queryToken } on success, or a Response on failure.
- *  ?refresh=1 triggers upstream sync before returning. */
+ *  ?refresh=1 triggers upstream sync before returning (min 60s interval). */
 async function resolveExportAuth(req, env, logAction) {
 	const url = new URL(req.url);
 	const queryToken = url.searchParams.get("token") || "";
@@ -317,29 +317,36 @@ async function resolveExportAuth(req, env, logAction) {
 
 	const shouldRefresh = url.searchParams.get("refresh") !== "0";
 	const urls = await getUpstreamUrls(env.store);
+	let upstreamWarning = "";
 	if (shouldRefresh && urls.length > 0) {
-		const results = [];
-		for (const u of urls) {
-			const r = await syncOneUpstream(u, env.store);
-			results.push(r);
-		}
-		await saveUpstreamUrls(env.store, urls);
-		const fresh = await loadAllUpstreamNodes(env.store);
-		allWithUpstream.length = 0;
-		allWithUpstream.push(...all, ...fresh);
-		const total = fresh.length;
-		const failed = results.filter((r) => !r.ok).length;
-		const detail =
-			failed > 0
-				? `${total} nodes, ${failed}/${results.length} sources failed`
-				: `${total} nodes`;
-		await appendAudit(
-			env.store,
-			"upstream-sync",
-			clientIP(req),
-			detail,
-			failed > 0 ? "ERROR" : "INFO",
+		// 最小同步间隔：60s 内已同步过的上游跳过，防并发请求重复打上游（不牺牲新鲜度）
+		const MIN_SYNC_INTERVAL = 60 * 1000;
+		const due = urls.filter(
+			(u) => Date.now() - (u.lastSync || 0) > MIN_SYNC_INTERVAL,
 		);
+		if (due.length > 0) {
+			// 并行同步；syncOneUpstream 内部捕获异常，单个失败不影响其他上游
+			await Promise.allSettled(due.map((u) => syncOneUpstream(u, env.store)));
+			await saveUpstreamUrls(env.store, urls);
+			const fresh = await loadAllUpstreamNodes(env.store);
+			allWithUpstream.length = 0;
+			allWithUpstream.push(...all, ...fresh);
+			const total = fresh.length;
+			const failed = due.filter((u) => u.lastError).length;
+			const detail =
+				failed > 0
+					? `${total} nodes, ${failed}/${due.length} sources failed`
+					: `${total} nodes`;
+			await appendAudit(
+				env.store,
+				"upstream-sync",
+				clientIP(req),
+				detail,
+				failed > 0 ? "ERROR" : "INFO",
+			);
+			if (failed > 0)
+				upstreamWarning = `${failed}/${due.length} upstream sources failed to sync, serving cached nodes`;
+		}
 	}
 
 	let selected;
@@ -370,16 +377,17 @@ async function resolveExportAuth(req, env, logAction) {
 	}
 
 	if (queryToken) await clearBrute(env.store, clientIP(req));
-	return { selected, queryToken };
+	return { selected, queryToken, upstreamWarning };
 }
 
 /** GET /api/export/momo — export complete config.json for OpenWrt-momo */
 async function handleExportMomo(req, env) {
-	const { selected, queryToken, _err } = await resolveExportAuth(
-		req,
-		env,
-		"export-momo",
-	);
+	const {
+		selected,
+		queryToken,
+		upstreamWarning = "",
+		_err,
+	} = await resolveExportAuth(req, env, "export-momo");
 	if (_err) return _err;
 
 	const url = new URL(req.url);
@@ -413,19 +421,22 @@ async function handleExportMomo(req, env) {
 			clientIP(req),
 			`${_meta.nodeCount} nodes`,
 		);
+	const headers = { "Content-Type": "application/json" };
+	if (upstreamWarning) headers["X-Upstream-Warning"] = upstreamWarning;
 	return new Response(JSON.stringify(config, null, 2), {
 		status: 200,
-		headers: { "Content-Type": "application/json" },
+		headers,
 	});
 }
 
 /** GET /api/export/kernel — export complete config.json for sing-box HPC client */
 async function handleExportKernel(req, env) {
-	const { selected, queryToken, _err } = await resolveExportAuth(
-		req,
-		env,
-		"export-kernel",
-	);
+	const {
+		selected,
+		queryToken,
+		upstreamWarning = "",
+		_err,
+	} = await resolveExportAuth(req, env, "export-kernel");
 	if (_err) return _err;
 
 	const url = new URL(req.url);
@@ -459,19 +470,22 @@ async function handleExportKernel(req, env) {
 			clientIP(req),
 			`${_meta.nodeCount} nodes`,
 		);
+	const headers = { "Content-Type": "application/json" };
+	if (upstreamWarning) headers["X-Upstream-Warning"] = upstreamWarning;
 	return new Response(JSON.stringify(config, null, 2), {
 		status: 200,
-		headers: { "Content-Type": "application/json" },
+		headers,
 	});
 }
 
 /** GET /api/export/windows — export complete config.json for sing-box Windows client */
 async function handleExportWindows(req, env) {
-	const { selected, queryToken, _err } = await resolveExportAuth(
-		req,
-		env,
-		"export-windows",
-	);
+	const {
+		selected,
+		queryToken,
+		upstreamWarning = "",
+		_err,
+	} = await resolveExportAuth(req, env, "export-windows");
 	if (_err) return _err;
 
 	const url = new URL(req.url);
@@ -505,9 +519,11 @@ async function handleExportWindows(req, env) {
 			clientIP(req),
 			`${_meta.nodeCount} nodes`,
 		);
+	const headers = { "Content-Type": "application/json" };
+	if (upstreamWarning) headers["X-Upstream-Warning"] = upstreamWarning;
 	return new Response(JSON.stringify(config, null, 2), {
 		status: 200,
-		headers: { "Content-Type": "application/json" },
+		headers,
 	});
 }
 

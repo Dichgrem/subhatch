@@ -54,7 +54,7 @@ export async function syncOneUpstream(u, store) {
 		}
 		if (isPrivateHost(syncUrl.hostname))
 			throw new Error("private host not allowed");
-		const r = await fetch(u.url);
+		const r = await fetch(u.url, { signal: AbortSignal.timeout(10_000) });
 		if (!r.ok) throw new Error(`HTTP ${r.status}`);
 		let raw = await r.text();
 		raw = raw.trim();
@@ -82,8 +82,11 @@ export async function syncOneUpstream(u, store) {
 		u.nodeCount = nodes.length;
 		return { ok: true, count: nodes.length };
 	} catch (e) {
-		u.lastError = e.message;
-		return { ok: false, error: e.message };
+		u.lastError =
+			e.name === "TimeoutError" || e.name === "AbortError"
+				? "timeout after 10s"
+				: e.message;
+		return { ok: false, error: u.lastError };
 	}
 }
 

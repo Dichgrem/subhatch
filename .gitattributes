@@ -1,0 +1,15 @@
+# 跨平台统一换行符：文本文件自动检测（text=auto），源码强制 LF（eol=lf）
+# 避免 Windows core.autocrlf=true 与 LF 文件反复转换
+* text=auto
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.nix text eol=lf
+*.lock text eol=lf
+Dockerfile text eol=lf
+justfile text eol=lf
+*.sh text eol=lf

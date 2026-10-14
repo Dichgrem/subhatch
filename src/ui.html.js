@@ -349,8 +349,7 @@ async function loadSubUrl() {
   if (!ok) return;
   subUrl = data.url;
   document.getElementById('sub-url-text').textContent = subUrl;
-  setMomoUrl();
-  setKernelUrl();
+  setClientUrl();
 }
 
 async function loadTokens() {
@@ -653,8 +652,7 @@ async function rotateToken() {
   const base = new URL(subUrl).origin;
   subUrl = \`\${base}/sub?token=\${encodeURIComponent(data.token)}\`;
   document.getElementById("sub-url-text").textContent = subUrl;
-  setMomoUrl();
-  setKernelUrl();
+  setClientUrl();
   toast("Token rotated", "ok");
 }
 

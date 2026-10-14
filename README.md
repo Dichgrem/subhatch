@@ -24,9 +24,10 @@ Supports **VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · AnyTL
 - **Multi-node input** — paste one or many URIs (newline/pipe-separated) or base64 subscription
 - **Node QR & copy** — individual QR code and copy button per node row
 - **Upstream import** — subscribe to external URLs, merge into export
-- **Config export** — sing-box outbound JSON ([desktop](docs/usage_zh-CN.md#sing-box-kernel) and [HPC](docs/usage_zh-CN.md#sing-box-kernel) variants)
+- **Config export** — sing-box outbound JSON, plus full config.json for Kernel, Windows and Android (SFA) ([usage](docs/usage.md#android-sfa))
 - **Node upload API** — `POST /api/upload` with auto-generated token
 - **Momo export** — OpenWrt-momo full config with 4 presets
+- **Android (SFA) export** — full config with per-app proxy (`includePackage` / `excludePackage`) and `overrideAndroidVpn`
 - **Audit log** — color-coded admin operation history with IP
 - **Hidden info mode** — hide sensitive text for screenshots
 - **Version update check** — GitHub release notification in UI

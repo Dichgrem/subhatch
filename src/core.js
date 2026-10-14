@@ -4,6 +4,7 @@
  * Handlers for upstream and tokens live in upstream.js and tokens.js.
  */
 
+import { buildAndroidConfig } from "./android.js";
 import { exportSingBox } from "./export.js";
 import { buildKernelConfig } from "./kernel.js";
 import { buildMomoConfig } from "./momo.js";
@@ -527,6 +528,57 @@ async function handleExportWindows(req, env) {
 	});
 }
 
+/** GET /api/export/android — export complete config.json for sing-box for Android (SFA) */
+async function handleExportAndroid(req, env) {
+	const {
+		selected,
+		queryToken,
+		upstreamWarning = "",
+		_err,
+	} = await resolveExportAuth(req, env, "export-android");
+	if (_err) return _err;
+
+	const url = new URL(req.url);
+	const options = {};
+	for (const key of [
+		"preset",
+		"selectorTag",
+		"dnsPort",
+		"mixedPort",
+		"tunAddress",
+		"tunAddress6",
+		"dnsStrategy",
+		"listen",
+		"clashPort",
+		"clashSecret",
+		"includePackage",
+		"excludePackage",
+		"overrideAndroidVpn",
+		"fakeip",
+	]) {
+		const val = url.searchParams.get(key);
+		if (val != null) options[key] = val;
+	}
+
+	options.preset = normalizePreset(options.preset);
+
+	const result = buildAndroidConfig(selected, options);
+	const { _meta, ...config } = result;
+	if (queryToken)
+		await appendAudit(
+			env.store,
+			"export-android",
+			clientIP(req),
+			`${_meta.nodeCount} nodes`,
+		);
+	const headers = { "Content-Type": "application/json" };
+	if (upstreamWarning) headers["X-Upstream-Warning"] = upstreamWarning;
+	return new Response(JSON.stringify(config, null, 2), {
+		status: 200,
+		headers,
+	});
+}
+
 // ── Main router ──
 export async function handleRequest(req, env) {
 	const url = new URL(req.url);
@@ -549,6 +601,8 @@ export async function handleRequest(req, env) {
 		return handleExportKernel(req, env);
 	if (path === "/api/export/windows" && method === "GET")
 		return handleExportWindows(req, env);
+	if (path === "/api/export/android" && method === "GET")
+		return handleExportAndroid(req, env);
 	if (path === "/api/sub-url" && method === "GET")
 		return handleSubUrl(req, env);
 	if (path === "/api/sub-token" && method === "PUT")

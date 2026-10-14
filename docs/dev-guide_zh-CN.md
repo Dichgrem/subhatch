@@ -36,6 +36,8 @@ just run
 - **`tokens.js`** — 订阅令牌 + 作用域令牌管理
 - **`export.js`** — Sing-box JSON 出站转换器（逐节点 URL 解析）
 - **`kernel.js`** — HPC/桌面 sing-box config.json 生成器
+- **`windows.js`** — Windows 桌面 sing-box config.json 生成器
+- **`android.js`** — Android (SFA) sing-box config.json 生成器
 - **`momo.js`** — OpenWrt-momo config.json 生成器
 - **`ui.html.js`** — Web UI HTML 模板 + 内联 JavaScript
 - **`css.js`** — Web UI 样式表

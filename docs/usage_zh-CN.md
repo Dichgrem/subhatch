@@ -19,8 +19,7 @@
 | Stats 栏 | 是 | 标题右侧：绿点 + Nodes / Env / Stored 计数 |
 | 顶栏按钮组 | 是 | 控制各卡片和区域的显示/隐藏 |
 | Subscription URL | 是（按 Sub 切换） | 订阅地址 + 配置导出 + 节点上传 |
-| OpenWrt-momo | 否（按 Momo 展开） | Momo 完整 config.json 配置区 |
-| sing-box Kernel | 否（按 Kernel 展开） | HPC/桌面 Kernel config.json 配置区 |
+| Client Export | 否（按 Client 展开） | Kernel / Windows / Android (SFA) / Momo 完整 config.json 导出 |
 | Node Upload | 否（按 Upload 展开） | 节点推送 API 地址 |
 | Upstream Sources | 否（按 Upstream 展开） | 外部订阅来源管理 |
 | Access Tokens | 是（按 Tokens 切换） | 主 Token + 分 Token 管理 |
@@ -55,7 +54,7 @@
 
 ## OpenWrt-momo
 
-点顶栏 **Momo** 按钮展开。用于生成 OpenWrt 路由器上 luci-app-momo 的完整 sing-box config.json。
+在 **Client** 平台下拉中选择 **OpenWrt-momo**。用于生成 OpenWrt 路由器上 luci-app-momo 的完整 sing-box config.json。
 
 ### 预设选择
 
@@ -96,7 +95,7 @@ https://你的域名/api/export/momo?token=<sub_token>&preset=ipv4only_realip
 
 ## sing-box Kernel (HPC)
 
-点顶栏 **Kernel** 按钮展开。用于 Linux 桌面 / HPC 上的 sing-box 内核（`/etc/sing-box/config.json`）。
+在 **Client** 平台下拉中选择 **Kernel (HPC/Linux)**。用于 Linux 桌面 / HPC 上的 sing-box 内核（`/etc/sing-box/config.json`）。
 
 同样 4 种预设，与 Momo 的区别：
 
@@ -117,6 +116,59 @@ https://你的域名/api/export/momo?token=<sub_token>&preset=ipv4only_realip
 ```
 https://你的域名/api/export/kernel?token=<sub_token>&preset=ipv4only_realip
 ```
+
+---
+
+## Windows
+
+在 **Client** 平台下拉中选择 **Windows**。用于生成 Windows 桌面上 sing-box 的完整 `config.json`。
+
+同样 4 种预设。与 Kernel 的区别：mixed 入站 `set_system_proxy: true`、`strict_route: true`、Clash API 端口 9090、相对路径 `cache.db`。
+
+链接格式：
+
+```
+https://你的域名/api/export/windows?token=<sub_token>&preset=ipv4only_realip
+```
+
+---
+
+## Android (SFA)
+
+在 **Client** 平台下拉中选择 **Android (SFA)**。用于生成官方 [sing-box for Android](https://github.com/SagerNet/sing-box-for-android) 应用的完整 `config.json`。
+
+同样 4 种预设。与 Windows 的主要区别：
+
+| 特性 | Windows | Android (SFA) |
+|------|---------|---------------|
+| TUN 接口名 | `stun` | 省略（由 Android VpnService 托管）|
+| mixed 系统代理 | `set_system_proxy: true` | 不设置，交给 TUN |
+| route 规则顺序 | sniff 在最后 | sniff 在最前（域名规则需要先嗅探）|
+| 分应用代理 | — | `include_package` / `exclude_package` |
+| Clash API 端口 | 9090 | 9090 |
+
+链接格式：
+
+```
+https://你的域名/api/export/android?token=<sub_token>&preset=ipv4only_realip
+```
+
+### 额外查询参数
+
+| 参数 | 说明 |
+|------|------|
+| `includePackage` | 需要代理的包名，逗号分隔（如 `com.android.chrome,com.termux`）|
+| `excludePackage` | 需要绕过的包名，逗号分隔 |
+| `overrideAndroidVpn` | `1` 表示接受其它 VPN 作为上游（`route.override_android_vpn`）|
+
+分应用代理也可在 SFA 自身的「Overrides」设置中覆盖。
+
+### 生成的配置包含
+
+- `log`、`dns`、`outbounds`、`http_clients`：与 Windows 相同
+- `inbounds`：dns-in（1053）、tun-in（VpnService，`auto_route` + `strict_route`）、mixed（7890）
+- `route`：嗅探 → 劫持 DNS → 私有 IP 直连 → geosite-cn → geoip-cn → selector
+- `experimental`：cache_file（`cache.db`）+ clash_api（Yacd-meta 面板，端口 9090）
 
 ---
 

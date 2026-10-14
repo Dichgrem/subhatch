@@ -36,6 +36,8 @@ Source modules in `src/`:
 - **`tokens.js`** — subscription token + scoped token management
 - **`export.js`** — sing-box JSON outbound converter (per-node URL parsing)
 - **`kernel.js`** — HPC/desktop sing-box config.json generator
+- **`windows.js`** — Windows desktop sing-box config.json generator
+- **`android.js`** — Android (SFA) sing-box config.json generator
 - **`momo.js`** — OpenWrt-momo config.json generator
 - **`ui.html.js`** — Web UI HTML template + inline JavaScript
 - **`css.js`** — Web UI stylesheet

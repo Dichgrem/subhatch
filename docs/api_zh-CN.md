@@ -9,7 +9,7 @@
 
 ## 管理接口（需会话）
 
-大多数 `/api/*` 接口需要会话 Token。例外：`/api/login`（创建会话）、`/api/export/momo` 和 `/api/export/kernel`（也支持 `?token=` 查询参数认证）。
+大多数 `/api/*` 接口需要会话 Token。例外：`/api/login`（创建会话）、`/api/export/momo`、`/api/export/kernel`、`/api/export/windows`、`/api/export/android`（也支持 `?token=` 查询参数认证）。
 
 | 方法   | 路径                 | 说明                     |
 |--------|----------------------|--------------------------|
@@ -20,6 +20,8 @@
 | GET    | `/api/export/sing-box` | 导出所有节点为 sing-box JSON |
 | GET    | `/api/export/momo`     | 导出 OpenWrt-momo 完整 config.json |
 | GET    | `/api/export/kernel`   | 导出 HPC/桌面 sing-box 完整 config.json |
+| GET    | `/api/export/windows`  | 导出 Windows 桌面 sing-box 完整 config.json |
+| GET    | `/api/export/android`  | 导出 Android (SFA) 完整 config.json |
 | GET    | `/api/sub-url`       | 返回主订阅地址            |
 | PUT    | `/api/sub-token`     | 轮换主订阅 Token          |
 | GET    | `/api/sub-tokens`    | 列出所有 Token（主+分）   |
@@ -291,6 +293,42 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 
 ---
 
+## GET /api/export/android
+
+返回官方 [sing-box for Android](https://github.com/SagerNet/sing-box-for-android) 应用（SFA）完整的 sing-box `config.json`。TUN 设备由 Android VpnService 提供，因此省略 `interface_name`，分应用代理通过 `include_package` / `exclude_package` 控制。
+
+**认证：** 与 `/api/export/momo` 相同（会话 Token 或订阅 Token）。
+
+**Android 订阅地址：**
+```
+https://你的域名/api/export/android?token=<你的订阅token>
+```
+
+### 查询参数
+
+与 `/api/export/kernel` 相同，额外支持：
+
+| 参数                 | 默认值  | 说明                                                       |
+|----------------------|---------|------------------------------------------------------------|
+| `includePackage`     | —       | 需要代理的 Android 包名，逗号分隔                          |
+| `excludePackage`     | —       | 需要绕过的 Android 包名，逗号分隔                          |
+| `overrideAndroidVpn` | `false` | `1`/`true` 设置 `route.override_android_vpn`（接受其它 VPN 作为上游）|
+| `clashPort`          | 9090    | Clash API 监听端口                                         |
+
+### 预设
+
+与其它平台相同：`ipv4only_realip`、`ipv4only_fakeip`、`ipv4plus_realip`、`ipv4plus_fakeip`。
+
+### 响应
+
+结构与 `/api/export/kernel` 相同，差异如下：
+- `log`、`dns`、`outbounds`、`http_clients`：与 Windows 相同
+- `inbounds`：`dns-in`（direct:1053）、`tun-in`（tun，无 `interface_name`，`auto_route` + `strict_route`）、`mixed`（7890，无 `set_system_proxy`）
+- `route`：sniff → hijack-dns → 私有 IP → geosite-cn → geoip-cn → final selector；启用 `auto_detect_interface`
+- `experimental`：cache_file（`cache.db`）+ clash_api（Yacd-meta 面板，端口 9090）
+
+---
+
 ## 审计日志
 
 ### GET /api/audit-log
@@ -330,6 +368,8 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 | `token-delete` | INFO | Token 前缀 | 删除分 Token |
 | `export-momo` | INFO | `N nodes` | 导出 Momo 配置 |
 | `export-kernel` | INFO | `N nodes` | 导出 Kernel 配置 |
+| `export-windows` | INFO | `N nodes` | 导出 Windows 配置 |
+| `export-android` | INFO | `N nodes` | 导出 Android (SFA) 配置 |
 | `export-json` | INFO | `N outbounds` | 导出 sing-box JSON |
 | `upload` | INFO | added/dupes | 通过 API 上传节点 |
 | `upstream-add` | INFO | 名称/URL | 添加上游来源 |
@@ -396,7 +436,7 @@ https://your-domain.com/api/export/kernel?token=<你的订阅token>
 
 ### 导出时刷新
 
-`/api/export/momo` 与 `/api/export/kernel` 请求时默认同步上游来源（新鲜度优先设计），同一来源**60 秒最小同步间隔**（防止并发请求重复拉取）。加 `?refresh=0` 可完全跳过同步。
+`/api/export/*` 请求时默认同步上游来源（momo、kernel、windows、android，新鲜度优先设计），同一来源**60 秒最小同步间隔**（防止并发请求重复拉取）。加 `?refresh=0` 可完全跳过同步。
 
 若有来源同步失败，响应会带 `X-Upstream-Warning` 响应头（如 `1/2 upstream sources failed to sync, serving cached nodes`），并降级返回缓存的节点。
 

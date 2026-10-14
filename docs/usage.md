@@ -19,8 +19,7 @@ After login, the page has the following sections, top to bottom:
 | Stats bar | Yes | Next to title: green dot + Nodes / Env / Stored counts |
 | Topbar buttons | Yes | Toggle visibility of cards and subsections |
 | Subscription URL | Yes (toggle with Sub) | Subscription link + config export + node upload |
-| OpenWrt-momo | No (expand with Momo) | Full momo config.json export |
-| sing-box Kernel | No (expand with Kernel) | Full kernel config.json export |
+| Client Export | No (expand with Client) | Full config.json export — Kernel / Windows / Android (SFA) / Momo |
 | Node Upload | No (expand with Upload) | Node push API URL |
 | Upstream Sources | No (expand with Upstream) | External subscription import |
 | Access Tokens | Yes (toggle with Tokens) | Primary + scoped token management |
@@ -55,7 +54,7 @@ The topbar **Hide** button masks sensitive content: node names become `•••
 
 ## OpenWrt-momo
 
-Click the **Momo** button in the topbar to expand. Generates a complete sing-box config.json for luci-app-momo on OpenWrt routers.
+Select **OpenWrt-momo** in the **Client** platform dropdown. Generates a complete sing-box config.json for luci-app-momo on OpenWrt routers.
 
 ### Preset Selection
 
@@ -96,7 +95,7 @@ https://your-domain.com/api/export/momo?token=<sub_token>&preset=ipv4only_realip
 
 ## sing-box Kernel (HPC)
 
-Click the **Kernel** button to expand. Generates config for the sing-box kernel on Linux desktop / HPC (`/etc/sing-box/config.json`).
+Select **Kernel (HPC/Linux)** in the **Client** platform dropdown. Generates config for the sing-box kernel on Linux desktop / HPC (`/etc/sing-box/config.json`).
 
 Same 4 presets as Momo. Key differences:
 
@@ -117,6 +116,59 @@ URL format:
 ```
 https://your-domain.com/api/export/kernel?token=<sub_token>&preset=ipv4only_realip
 ```
+
+---
+
+## Windows
+
+Select **Windows** in the **Client** platform dropdown. Generates a complete `config.json` for sing-box on Windows desktop.
+
+Same 4 presets as Kernel. Differences from Kernel: `set_system_proxy: true` on the mixed inbound, `strict_route: true`, Clash API on port 9090, and a relative `cache.db`.
+
+URL format:
+
+```
+https://your-domain.com/api/export/windows?token=<sub_token>&preset=ipv4only_realip
+```
+
+---
+
+## Android (SFA)
+
+Select **Android (SFA)** in the **Client** platform dropdown. Generates a complete `config.json` for the official [sing-box for Android](https://github.com/SagerNet/sing-box-for-android) app.
+
+Same 4 presets as the other platforms. Key differences from Windows:
+
+| Feature | Windows | Android (SFA) |
+|---------|---------|---------------|
+| TUN interface name | `stun` | omitted (Android VpnService owns the device) |
+| Mixed inbound system proxy | `set_system_proxy: true` | not set — TUN handles routing |
+| Route rule order | sniff last | sniff first (domain rules need the sniffed host) |
+| Per-app proxy | — | `include_package` / `exclude_package` |
+| Clash API port | 9090 | 9090 |
+
+URL format:
+
+```
+https://your-domain.com/api/export/android?token=<sub_token>&preset=ipv4only_realip
+```
+
+### Extra query parameters
+
+| Param | Description |
+|-------|-------------|
+| `includePackage` | Comma-separated package names to proxy (e.g. `com.android.chrome,com.termux`) |
+| `excludePackage` | Comma-separated package names to bypass |
+| `overrideAndroidVpn` | `1` to accept another VPN as upstream (`route.override_android_vpn`) |
+
+Per-app proxy can also be overridden from SFA's own "Overrides" settings.
+
+### Generated Config Includes
+
+- `log`, `dns`, `outbounds`, `http_clients`: same as Windows
+- `inbounds`: dns-in (1053), tun-in (VpnService, `auto_route` + `strict_route`), mixed (7890)
+- `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → selector
+- `experimental`: cache_file (`cache.db`) + clash_api (Yacd-meta dashboard, port 9090)
 
 ---
 

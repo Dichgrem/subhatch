@@ -27,12 +27,12 @@ test/
 │   ├── auth.test.js          # POST /api/login, /api/logout
 │   ├── nodes.test.js         # GET/PUT /api/nodes
 │   ├── sub.test.js           # /sub, scoped tokens CRUD
-│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel
+│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel, /windows, /android
 │   ├── upload.test.js        # POST /api/upload, /api/upload-token
 │   ├── upstream.test.js      # Upstream CRUD + sync + SSRF guard
 │   └── audit.test.js         # Audit log read/clear
 └── integration/
-    └── full.test.js          # 12-step end-to-end flow
+    └── full.test.js          # 13-step end-to-end flow
 ```
 
 ## How it works

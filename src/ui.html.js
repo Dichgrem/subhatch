@@ -95,6 +95,7 @@ ${CSS}
         <select id="client-platform" onchange="setClientUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
           <option value="kernel">Kernel (HPC/Linux)</option>
           <option value="windows">Windows</option>
+          <option value="android">Android (SFA)</option>
           <option value="momo">OpenWrt-momo</option>
         </select>
         <select id="client-preset" onchange="setClientUrl()" style="font-size:11px;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px">
@@ -690,6 +691,7 @@ async function copyClientUrl() {
 const CLIENT_HINTS = {
   kernel: "Point sing-box at this URL — returns full config.json for Linux desktop / HPC.",
   windows: "Point sing-box at this URL — returns full config.json for Windows desktop.",
+  android: "Import into sing-box for Android (SFA) — returns full config.json.",
   momo: "Paste into momo Subscription URL — returns full config.json.",
 };
 

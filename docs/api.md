@@ -9,7 +9,7 @@
 
 ## Admin endpoints (session required)
 
-Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` (creates session), `/api/export/momo` and `/api/export/kernel` (also accept sub-token via `?token=`).
+Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` (creates session) and `/api/export/momo`, `/api/export/kernel`, `/api/export/windows`, `/api/export/android` (also accept sub-token via `?token=`).
 
 | Method | Path                | Description                          |
 |--------|---------------------|--------------------------------------|
@@ -20,6 +20,8 @@ Most `/api/*` endpoints require a valid session token. Exceptions: `/api/login` 
 | GET    | `/api/export/sing-box` | Export all nodes as sing-box JSON  |
 | GET    | `/api/export/momo`     | Export full config.json for OpenWrt-momo |
 | GET    | `/api/export/kernel`   | Export full config.json for HPC/desktop sing-box |
+| GET    | `/api/export/windows`  | Export full config.json for Windows desktop sing-box |
+| GET    | `/api/export/android`  | Export full config.json for Android (SFA) |
 | GET    | `/api/sub-url`      | Returns the primary subscription URL |
 | PUT    | `/api/sub-token`    | Rotate the primary subscription token|
 | GET    | `/api/sub-tokens`   | List all tokens (primary + scoped)   |
@@ -312,6 +314,42 @@ The response includes:
 
 ---
 
+## GET /api/export/android
+
+Returns a complete sing-box `config.json` for the official [sing-box for Android](https://github.com/SagerNet/sing-box-for-android) app (SFA). The TUN device is provided by Android VpnService, so `interface_name` is omitted and per-app proxy is controlled through `include_package` / `exclude_package`.
+
+**Auth:** Same two modes as `/api/export/momo` (session token or sub-token).
+
+**Android subscription URL:**
+```
+https://your-domain.com/api/export/android?token=<your_sub_token>
+```
+
+### Query parameters
+
+Same as `/api/export/kernel`, plus:
+
+| Param                | Default | Description                                                    |
+|----------------------|---------|----------------------------------------------------------------|
+| `includePackage`     | —       | Comma-separated Android package names to proxy                 |
+| `excludePackage`     | —       | Comma-separated Android package names to bypass                |
+| `overrideAndroidVpn` | `false` | `1`/`true` sets `route.override_android_vpn` (accept another VPN as upstream) |
+| `clashPort`          | 9090    | Clash API listen port                                          |
+
+### Presets
+
+Same 4 presets as the other platforms: `ipv4only_realip`, `ipv4only_fakeip`, `ipv4plus_realip`, `ipv4plus_fakeip`.
+
+### Response
+
+Same shape as `/api/export/kernel`. The response includes:
+- `log`, `dns`, `outbounds`, `http_clients`: same as `/api/export/windows`
+- `inbounds`: `dns-in` (direct:1053), `tun-in` (tun, no `interface_name`, `auto_route` + `strict_route`), `mixed` (7890, no `set_system_proxy`)
+- `route`: sniff → hijack-dns → private-ip → geosite-cn → geoip-cn → final to selector; `auto_detect_interface`
+- `experimental`: cache_file (`cache.db`) + clash_api (Yacd-meta dashboard on port 9090)
+
+---
+
 ## Audit log
 
 ### GET /api/audit-log
@@ -351,6 +389,8 @@ Returns recent audit entries (newest first, max 500).
 | `token-delete` | INFO | token prefix | Scoped token deleted |
 | `export-momo` | INFO | `N nodes` | Momo config exported |
 | `export-kernel` | INFO | `N nodes` | Kernel config exported |
+| `export-windows` | INFO | `N nodes` | Windows config exported |
+| `export-android` | INFO | `N nodes` | Android (SFA) config exported |
 | `export-json` | INFO | `N outbounds` | Sing-box JSON exported |
 | `upload` | INFO | added/dupes | Node uploaded via API |
 | `upstream-add` | INFO | name/URL | Upstream source added |
@@ -417,7 +457,7 @@ Pull and refresh node cache for one or all upstream sources. Session auth.
 
 ### Refresh on export
 
-Upstream sources are synced on `/api/export/momo` and `/api/export/kernel` requests (freshness-first design), with a **60s minimum interval** between syncs of the same source to avoid duplicate concurrent fetches. Add `?refresh=0` to skip the sync entirely.
+Upstream sources are synced on `/api/export/*` requests (momo, kernel, windows, android — freshness-first design), with a **60s minimum interval** between syncs of the same source to avoid duplicate concurrent fetches. Add `?refresh=0` to skip the sync entirely.
 
 If any source fails to sync, the response includes an `X-Upstream-Warning` header (e.g. `1/2 upstream sources failed to sync, serving cached nodes`) and previously cached nodes are served instead.
 

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [5.4.0] - 2026-10-14
+
+### Added
+- Android (SFA) config export: `GET /api/export/android` with the same 4 presets, optional per-app proxy (`includePackage` / `excludePackage`) and `overrideAndroidVpn`
+- `src/android.js` generator; Client Export dropdown now lists Kernel / Windows / Android (SFA) / Momo
+
+### Fixed
+- Removed stale `setMomoUrl()` / `setKernelUrl()` calls in the UI that threw `ReferenceError` when loading the subscription URL and rotating the token
+
 ## [5.3.0] - 2026-09-01
 
 ### Changed

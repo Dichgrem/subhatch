@@ -27,12 +27,12 @@ test/
 │   ├── auth.test.js          # POST /api/login, /api/logout
 │   ├── nodes.test.js         # GET/PUT /api/nodes
 │   ├── sub.test.js           # /sub, 作用域令牌 CRUD
-│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel
+│   ├── export.test.js        # /api/export/sing-box, /momo, /kernel, /windows, /android
 │   ├── upload.test.js        # POST /api/upload, /api/upload-token
 │   ├── upstream.test.js      # 上游 CRUD + sync + SSRF 防护
 │   └── audit.test.js         # 审计日志读取/清空
 └── integration/
-    └── full.test.js          # 12 步端到端流程
+    └── full.test.js          # 13 步端到端流程
 ```
 
 ## 工作原理

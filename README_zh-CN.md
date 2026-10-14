@@ -24,9 +24,10 @@
 - **多节点输入** — 粘贴单条或批量 URI（换行/竖线分隔），自动识别 base64 编码的订阅内容
 - **节点二维码与复制** — 每个节点独立生成二维码和复制按钮
 - **上游订阅导入** — 合并外部订阅链接到导出配置
-- **配置导出** — sing-box 出站 JSON（桌面与 HPC 版本）
+- **配置导出** — sing-box 出站 JSON，以及 Kernel、Windows、Android (SFA) 完整 config.json（[使用说明](docs/usage_zh-CN.md#android-sfa)）
 - **节点上传接口** — `POST /api/upload`，自动生成上传令牌
 - **Momo 导出** — OpenWrt-momo 完整配置，支持 4 种预设
+- **Android (SFA) 导出** — 完整配置，支持分应用代理（`includePackage` / `excludePackage`）与 `overrideAndroidVpn`
 - **审计日志** — 管理操作彩色记录，包含 IP 地址
 - **截图隐身模式** — 一键隐藏敏感信息
 - **版本更新检查** — 自动检测 GitHub 新版本

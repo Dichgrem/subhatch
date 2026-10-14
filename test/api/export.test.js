@@ -106,3 +106,49 @@ describe("GET /api/export/windows", () => {
 		assert.equal(mixed.set_system_proxy, true);
 	});
 });
+
+describe("GET /api/export/android", () => {
+	it("returns complete config.json", async () => {
+		const { status, data } = await api("/api/export/android", { token, baseUrl });
+		assert.equal(status, 200);
+		assert(Array.isArray(data.inbounds));
+		assert(Array.isArray(data.outbounds));
+		assert(data.experimental?.clash_api);
+	});
+
+	it("TUN uses auto_route/strict_route without interface_name", async () => {
+		const { status, data } = await api("/api/export/android", { token, baseUrl });
+		assert.equal(status, 200);
+		const tun = data.inbounds.find((i) => i.type === "tun");
+		assert(tun);
+		assert.equal(tun.auto_route, true);
+		assert.equal(tun.strict_route, true);
+		assert.equal(tun.interface_name, undefined);
+		assert.equal(tun.auto_redirect, undefined);
+	});
+
+	it("mixed inbound does not set system proxy", async () => {
+		const { status, data } = await api("/api/export/android", { token, baseUrl });
+		assert.equal(status, 200);
+		const mixed = data.inbounds.find((i) => i.type === "mixed");
+		assert(mixed);
+		assert.equal(mixed.set_system_proxy, undefined);
+	});
+
+	it("sniff rule comes before domain rules", async () => {
+		const { status, data } = await api("/api/export/android", { token, baseUrl });
+		assert.equal(status, 200);
+		assert.equal(data.route.rules[0].action, "sniff");
+	});
+
+	it("include_package and override_android_vpn query params work", async () => {
+		const { status, data } = await api(
+			"/api/export/android?includePackage=com.android.chrome,com.termux&overrideAndroidVpn=1",
+			{ token, baseUrl },
+		);
+		assert.equal(status, 200);
+		const tun = data.inbounds.find((i) => i.type === "tun");
+		assert.deepEqual(tun.include_package, ["com.android.chrome", "com.termux"]);
+		assert.equal(data.route.override_android_vpn, true);
+	});
+});

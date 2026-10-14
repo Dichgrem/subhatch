@@ -96,20 +96,27 @@ describe("full e2e flow", () => {
 		assert(data.experimental);
 	});
 
-	it("10. audit log has entries", async () => {
+	it("10. export android config", async () => {
+		const { status, data } = await api("/api/export/android", { baseUrl });
+		assert.equal(status, 200);
+		assert(data.experimental);
+		assert.equal(data.route.rules[0].action, "sniff");
+	});
+
+	it("11. audit log has entries", async () => {
 		const { status, data } = await api("/api/audit-log", { baseUrl });
 		assert.equal(status, 200);
 		assert(data.log.length > 0);
 	});
 
-	it("11. logout", async () => {
+	it("12. logout", async () => {
 		const { status } = await api("/api/logout", {
 			method: "POST", baseUrl,
 		});
 		assert.equal(status, 200);
 	});
 
-	it("12. session invalid after logout", async () => {
+	it("13. session invalid after logout", async () => {
 		const { status, data } = await api("/api/nodes", { baseUrl });
 		assert.equal(status, 401);
 		assert(data.error);

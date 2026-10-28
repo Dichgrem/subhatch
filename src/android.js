@@ -68,7 +68,7 @@ function parsePackages(val) {
  * @param {string} [options.dnsStrategy]  — override DNS strategy
  * @param {string} [options.listen]       — override listen IP for inbounds
  * @param {string} [options.fakeip]       — set "false" or "0" for real-DNS mode (no FakeIP)
- * @param {number} [options.clashPort=9090]
+ * @param {number} [options.clashPort=9191]
  * @param {string} [options.clashSecret]
  * @param {string} [options.includePackage] — comma-separated Android package names to proxy
  * @param {string} [options.excludePackage] — comma-separated Android package names to bypass
@@ -250,7 +250,7 @@ export function buildAndroidConfig(nodeUrls, options = {}) {
 			store_fakeip: useFakeip,
 		},
 		clash_api: {
-			external_controller: `127.0.0.1:${int(options.clashPort, 9090)}`,
+			external_controller: `127.0.0.1:${int(options.clashPort, 9191)}`,
 			external_ui: "ui",
 			external_ui_download_url:
 				"https://codeload.github.com/MetaCubeX/Yacd-meta/zip/refs/heads/gh-pages",
